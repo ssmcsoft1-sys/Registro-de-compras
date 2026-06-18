@@ -1,0 +1,203 @@
+/* ============================================================
+   Yago Design System — Colors & Type
+   Source of truth for foundation tokens.
+   Derived from the X-YAGO Mobile Figma file and brand logo.
+   ============================================================ */
+
+/* ---------- Webfonts ----------
+   Red Hat Display (brand-supplied TTF, variable weight 100–900).
+   Wired locally from /fonts; no external CDN needed.
+*/
+@font-face {
+  font-family: "Red Hat Display";
+  src: url("fonts/RedHatDisplay-VariableFont_wght.ttf") format("truetype-variations"),
+       url("fonts/RedHatDisplay-VariableFont_wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+    /* -----------------------------------------------------------
+       BRAND COLORS
+       ----------------------------------------------------------- */
+
+    /* Primary — deep indigo. Used on filled buttons, headings,
+       active nav, primary icons, links. Pairs with white. */
+    --yago-indigo-900: #1f1c5e;
+    --yago-indigo-800: #2a2680;
+    --yago-indigo-700: #322d91;   /* PRIMARY */
+    --yago-indigo-600: #4843a8;
+    --yago-indigo-500: #6863c2;
+    --yago-indigo-300: #b9b6e0;
+    --yago-indigo-100: #e7e6f3;
+    --yago-indigo-tint-10: rgba(50, 45, 145, 0.10); /* surfaces, pills */
+    --yago-indigo-tint-15: rgba(50, 45, 145, 0.15);
+    --yago-indigo-tint-20: rgba(50, 45, 145, 0.20);
+
+    /* Logo / mascot — orange gradient (Yago bear). Used sparingly:
+       splash, illustrations, emoji-like accents. NOT used as UI fill. */
+    --yago-orange-500: #ff8a3d;
+    --yago-orange-400: #ffa55a;
+    --yago-orange-300: #ffc285;
+    --yago-orange-gradient: linear-gradient(180deg, #ffae54 0%, #ff7a2a 100%);
+
+    /* Accent — magenta. Used for notification dots, "new" markers,
+       small status pips. Never used as a button. */
+    --yago-magenta-500: #e72c6e;
+    --yago-magenta-300: #f590b3;
+
+    /* Accent — yellow. Used for "ausente" (away) status only. */
+    --yago-yellow-500: #f5b400;
+    --yago-yellow-tint: #fbe6a8;
+    --yago-yellow-burnt: #6b4500;   /* accessible foreground on yellow tint */
+
+    /* Accent — green. Used for success states, "online" status. */
+    --yago-green-700: #1c4b2f;
+    --yago-green-500: #1f8a5b;
+    --yago-green-300: #66c89c;
+
+    /* Accent — gradient used as a BANNER background only.
+       Do NOT use as a button fill. Reserved for hero strips,
+       upgrade banners, marketing cards. */
+    --yago-gradient-cta: linear-gradient(90deg, #322d91 0%, #e72c6e 100%);
+
+    /* Avatar fallback gradient — two dark indigos. Used as the background
+       for initial-only avatars (no robot illustration). No white/light stop,
+       to avoid a glossy/volumetric look. */
+    --yago-avatar-gradient: linear-gradient(135deg, #4843a8 0%, #1f1c5e 100%);
+
+    /* -----------------------------------------------------------
+       NEUTRALS
+       ----------------------------------------------------------- */
+    --yago-white:    #ffffff;
+    --yago-paper:    #f7f7fb;   /* page background tint */
+    --yago-gray-50:  #f2f2f5;
+    --yago-gray-100: #e8e8ee;
+    --yago-gray-200: #d6d6de;
+    --yago-gray-300: #bcbcc6;
+    --yago-gray-400: #9797a3;
+    --yago-gray-500: #707079;
+    --yago-gray-600: #4f4f57;
+    --yago-gray-700: #2f2f35;
+    --yago-gray-900: #111114;
+    --yago-black:    #000000;
+
+    /* -----------------------------------------------------------
+       SEMANTIC FOREGROUNDS
+       ----------------------------------------------------------- */
+    --fg-1: var(--yago-gray-900); /* default body */
+    --fg-2: var(--yago-gray-600); /* secondary copy */
+    --fg-3: var(--yago-gray-400); /* tertiary / hints */
+    --fg-on-primary: var(--yago-white);
+    --fg-link: var(--yago-indigo-700);
+    --fg-danger: var(--yago-magenta-500);
+    --fg-success: var(--yago-green-500);
+
+    /* -----------------------------------------------------------
+       SEMANTIC BACKGROUNDS / SURFACES
+       ----------------------------------------------------------- */
+    --bg-app:        var(--yago-paper);
+    --bg-surface:    var(--yago-white);
+    --bg-surface-2:  var(--yago-gray-50);
+    --bg-tint:       var(--yago-indigo-tint-10);
+    --bg-primary:    var(--yago-indigo-700);
+    --bg-overlay:    rgba(31, 28, 94, 0.55);
+
+    /* -----------------------------------------------------------
+       BORDERS / DIVIDERS
+       ----------------------------------------------------------- */
+    --border-1: var(--yago-gray-100);
+    --border-2: var(--yago-gray-200);
+    --border-focus: var(--yago-indigo-700);
+
+    /* -----------------------------------------------------------
+       SHADOWS — indigo-tinted, soft & low contrast
+       ----------------------------------------------------------- */
+    --shadow-xs: 0 1px 2px rgba(50, 45, 145, 0.06);
+    --shadow-sm: 0 2px 6px rgba(50, 45, 145, 0.08);
+    --shadow-md: 0 6px 16px rgba(50, 45, 145, 0.10);
+    --shadow-lg: 0 12px 28px rgba(50, 45, 145, 0.14);
+    --shadow-button: 0 0 10px rgba(50, 45, 145, 0.10); /* secondary btn */
+
+    /* -----------------------------------------------------------
+       RADII
+       6 (xs) is the STANDARD/default for cards, inputs, list rows,
+       and most containers. Other sizes are variations:
+       pill / full belong to buttons, segmented controls and avatars.
+       ----------------------------------------------------------- */
+    --radius-xs: 6px;     /* STANDARD — cards, inputs, rows, chips */
+    --radius-sm: 12px;
+    --radius-md: 16px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+    --radius-pill: 60px;  /* buttons, segmented controls */
+    --radius-full: 9999px;
+    --radius-default: var(--radius-xs);
+
+    /* -----------------------------------------------------------
+       SPACING — 4px scale
+       ----------------------------------------------------------- */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+
+    /* -----------------------------------------------------------
+       TYPOGRAPHY — Red Hat Display only.
+       Scale tuned for mobile-first.
+       ----------------------------------------------------------- */
+    --font-display: "Red Hat Display", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    /* Type scale */
+    --t-hero:     800 34px/1.05 var(--font-display);
+    --t-h1:       700 28px/1.15 var(--font-display);
+    --t-h2:       700 22px/1.2  var(--font-display);
+    --t-h3:       700 18px/1.25 var(--font-display);
+    --t-title:    700 16px/1.25 var(--font-display);  /* button labels */
+    --t-body:     500 15px/1.45 var(--font-display);
+    --t-body-sm:  500 13px/1.45 var(--font-display);
+    --t-caption:  500 12px/1.35 var(--font-display);
+    --t-overline: 700 11px/1.2  var(--font-display);
+
+    /* -----------------------------------------------------------
+       MOTION
+       ----------------------------------------------------------- */
+    --ease-standard: cubic-bezier(.2, .8, .2, 1);
+    --ease-emphatic: cubic-bezier(.2, .9, .1, 1.1);
+    --dur-fast: 120ms;
+    --dur-base: 200ms;
+    --dur-slow: 320ms;
+}
+
+/* ============================================================
+   ELEMENT DEFAULTS
+   ============================================================ */
+html, body {
+    background: var(--bg-app);
+    color: var(--fg-1);
+    font: var(--t-body);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+h1 { font: var(--t-h1); color: var(--fg-1); margin: 0 0 var(--space-3); }
+h2 { font: var(--t-h2); color: var(--fg-1); margin: 0 0 var(--space-3); }
+h3 { font: var(--t-h3); color: var(--fg-1); margin: 0 0 var(--space-2); }
+p  { font: var(--t-body); color: var(--fg-1); margin: 0 0 var(--space-3); }
+small, .caption { font: var(--t-caption); color: var(--fg-2); }
+a {
+    color: var(--fg-link);
+    text-decoration: none;
+    font-weight: 600;
+}
+a:hover { text-decoration: underline; }
+
+::selection { background: var(--yago-indigo-tint-20); color: var(--yago-indigo-900); }

@@ -1,0 +1,112 @@
+// Adaptador Postgres (producción / nube). Usa la variable de entorno DATABASE_URL
+// (Neon, Supabase, etc.). Expone la MISMA interfaz async que el adaptador SQLite.
+// Nota: Postgres normaliza identificadores a minúsculas, por eso la columna es
+// `pagado_por` y se mapea a `pagadoPor` en el modelo del frontend.
+
+import pg from 'pg'
+import { seedPurchases } from '../src/data/seed.js'
+
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }, // requerido por Neon/Supabase
+})
+
+const EDITABLE = ['fecha', 'proyecto', 'categoria', 'descripcion', 'proveedor', 'metodo', 'estado', 'importe', 'recibo', 'pagadoPor']
+const columnFor = (key) => (key === 'pagadoPor' ? 'pagado_por' : key)
+
+function rowToPurchase(row) {
+  return {
+    id: row.id,
+    fecha: row.fecha,
+    proyecto: row.proyecto,
+    categoria: row.categoria,
+    descripcion: row.descripcion,
+    proveedor: row.proveedor,
+    metodo: row.metodo,
+    estado: row.estado,
+    importe: row.importe,
+    recibo: row.recibo ? JSON.parse(row.recibo) : null,
+    pagadoPor: row.pagado_por ?? null,
+  }
+}
+
+// Inicialización: crea la tabla, migra la columna y siembra si está vacía.
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS purchases (
+    id          text PRIMARY KEY,
+    fecha       text NOT NULL,
+    proyecto    text NOT NULL,
+    categoria   text NOT NULL,
+    descripcion text NOT NULL,
+    proveedor   text NOT NULL,
+    metodo      text NOT NULL,
+    estado      text NOT NULL,
+    importe     double precision NOT NULL,
+    recibo      text,
+    pagado_por  text,
+    created_at  text NOT NULL
+  );
+`)
+await pool.query('ALTER TABLE purchases ADD COLUMN IF NOT EXISTS pagado_por text')
+
+const { rows: countRows } = await pool.query('SELECT COUNT(*)::int AS n FROM purchases')
+if (countRows[0].n === 0) {
+  for (const p of seedPurchases()) {
+    await pool.query(
+      `INSERT INTO purchases
+        (id, fecha, proyecto, categoria, descripcion, proveedor, metodo, estado, importe, recibo, pagado_por, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      [p.id, p.fecha, p.proyecto, p.categoria, p.descripcion, p.proveedor, p.metodo, p.estado, p.importe, null, null, p.fecha],
+    )
+  }
+}
+
+export async function getAllPurchases() {
+  const { rows } = await pool.query('SELECT * FROM purchases ORDER BY fecha DESC, created_at DESC')
+  return rows.map(rowToPurchase)
+}
+
+export async function getPurchase(id) {
+  const { rows } = await pool.query('SELECT * FROM purchases WHERE id = $1', [id])
+  return rows[0] ? rowToPurchase(rows[0]) : null
+}
+
+export async function updatePurchase(id, fields) {
+  const keys = Object.keys(fields).filter((k) => EDITABLE.includes(k))
+  if (keys.length === 0) return getPurchase(id)
+
+  const setClause = keys.map((k, i) => `${columnFor(k)} = $${i + 1}`).join(', ')
+  const values = keys.map((k) =>
+    k === 'recibo' ? (fields.recibo ? JSON.stringify(fields.recibo) : null) : fields[k],
+  )
+  await pool.query(`UPDATE purchases SET ${setClause} WHERE id = $${keys.length + 1}`, [...values, id])
+  return getPurchase(id)
+}
+
+export async function insertPurchase(p) {
+  await pool.query(
+    `INSERT INTO purchases
+      (id, fecha, proyecto, categoria, descripcion, proveedor, metodo, estado, importe, recibo, pagado_por, created_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+    [
+      p.id,
+      p.fecha,
+      p.proyecto,
+      p.categoria,
+      p.descripcion,
+      p.proveedor,
+      p.metodo,
+      p.estado,
+      p.importe,
+      p.recibo ? JSON.stringify(p.recibo) : null,
+      p.pagadoPor ?? null,
+      p.created_at,
+    ],
+  )
+  return getPurchase(p.id)
+}
+
+export async function deletePurchase(id) {
+  const { rowCount } = await pool.query('DELETE FROM purchases WHERE id = $1', [id])
+  return rowCount > 0
+}

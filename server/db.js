@@ -1,0 +1,16 @@
+// Selector de base de datos:
+//  - Si existe DATABASE_URL (nube) -> adaptador Postgres.
+//  - Si no (desarrollo local)      -> adaptador SQLite.
+// Ambos adaptadores exponen la misma interfaz async.
+
+const adapter = process.env.DATABASE_URL
+  ? await import('./db.postgres.js')
+  : await import('./db.sqlite.js')
+
+console.log(`  Base de datos: ${process.env.DATABASE_URL ? 'Postgres (nube)' : 'SQLite (local)'}`)
+
+export const getAllPurchases = adapter.getAllPurchases
+export const getPurchase = adapter.getPurchase
+export const insertPurchase = adapter.insertPurchase
+export const updatePurchase = adapter.updatePurchase
+export const deletePurchase = adapter.deletePurchase
