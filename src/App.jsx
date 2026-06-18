@@ -6,6 +6,7 @@ import Resumen from './views/Resumen.jsx'
 import Registrar from './views/Registrar.jsx'
 import Historial from './views/Historial.jsx'
 import Login from './views/Login.jsx'
+import { useSettings } from './lib/settings.jsx'
 import {
   AuthError,
   checkSession,
@@ -17,6 +18,7 @@ import {
 } from './lib/api.js'
 
 export default function App() {
+  const { t } = useSettings()
   const [authed, setAuthed] = useState(null) // null = comprobando, true/false = resultado
   const [view, setView] = useState('resumen')
   const [purchases, setPurchases] = useState([])
@@ -81,12 +83,12 @@ export default function App() {
         const saved = await createPurchase(purchase)
         setPurchases((prev) => [saved, ...prev])
         setView('historial')
-        showToast('Compra registrada correctamente')
+        showToast(t('toast.created'))
       } catch (e) {
-        if (!onAuthError(e)) showToast('No se pudo guardar. Revisa la conexión.')
+        if (!onAuthError(e)) showToast(t('toast.saveError'))
       }
     },
-    [showToast, onAuthError],
+    [showToast, onAuthError, t],
   )
 
   const editPurchase = useCallback(
@@ -94,14 +96,14 @@ export default function App() {
       try {
         const updated = await apiUpdatePurchase(id, fields)
         setPurchases((prev) => prev.map((p) => (p.id === id ? updated : p)))
-        showToast('Compra actualizada')
+        showToast(t('toast.updated'))
         return true
       } catch (e) {
-        if (!onAuthError(e)) showToast('No se pudo actualizar. Revisa la conexión.')
+        if (!onAuthError(e)) showToast(t('toast.updateError'))
         return false
       }
     },
-    [showToast, onAuthError],
+    [showToast, onAuthError, t],
   )
 
   const deletePurchase = useCallback(
@@ -109,16 +111,16 @@ export default function App() {
       try {
         await apiDeletePurchase(id)
         setPurchases((prev) => prev.filter((p) => p.id !== id))
-        showToast('Compra eliminada')
+        showToast(t('toast.deleted'))
       } catch (e) {
-        if (!onAuthError(e)) showToast('No se pudo eliminar. Revisa la conexión.')
+        if (!onAuthError(e)) showToast(t('toast.deleteError'))
       }
     },
-    [showToast, onAuthError],
+    [showToast, onAuthError, t],
   )
 
   if (authed === null) {
-    return <div className="boot">Cargando…</div>
+    return <div className="boot">{t('app.booting')}</div>
   }
   if (!authed) {
     return <Login onSuccess={handleLoginSuccess} />
@@ -131,12 +133,12 @@ export default function App() {
         <Header view={view} onRegister={() => setView('registrar')} />
         <div className="scroll-area">
           <div className="content">
-            {status === 'loading' && <div className="state-msg">Cargando compras…</div>}
+            {status === 'loading' && <div className="state-msg">{t('app.loading')}</div>}
             {status === 'error' && (
               <div className="state-msg state-msg--error">
-                No se pudo conectar con el servidor.
+                {t('app.connError')}
                 <button type="button" className="btn btn--secondary" onClick={load}>
-                  Reintentar
+                  {t('app.retry')}
                 </button>
               </div>
             )}

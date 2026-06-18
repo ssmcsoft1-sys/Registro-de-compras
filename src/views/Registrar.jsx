@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Check, Truck, Upload, FileText } from 'lucide-react'
 import { PROYECTOS_FORM, CATEGORIAS, METODOS } from '../lib/constants.js'
+import { useSettings } from '../lib/settings.jsx'
 
 function todayISO() {
   const now = new Date()
@@ -42,7 +43,8 @@ function buildForm(initial) {
 
 const MAX_RECIBO_BYTES = 2 * 1024 * 1024 // 2 MB
 
-export default function Registrar({ onSubmit, onCancel, initial = null, submitLabel = 'Guardar compra' }) {
+export default function Registrar({ onSubmit, onCancel, initial = null }) {
+  const { t, tProject, tCategory, tMethod, tStatus } = useSettings()
   const [form, setForm] = useState(() => buildForm(initial))
   const [reciboError, setReciboError] = useState('')
 
@@ -54,7 +56,7 @@ export default function Registrar({ onSubmit, onCancel, initial = null, submitLa
     const file = e.target.files && e.target.files[0]
     if (!file) return
     if (file.size > MAX_RECIBO_BYTES) {
-      setReciboError('El archivo supera 2 MB. Usa una foto más ligera o un PDF más pequeño.')
+      setReciboError(t('form.reciboError'))
       e.target.value = ''
       return
     }
@@ -91,15 +93,15 @@ export default function Registrar({ onSubmit, onCancel, initial = null, submitLa
     })
   }
 
+  const req = <span className="field__required">*</span>
+
   return (
     <div className="form-screen">
       <div className="form-card">
         <div className="form-grid">
           {/* Importe */}
           <div>
-            <label className="field__label">
-              Importe <span className="field__required">*</span>
-            </label>
+            <label className="field__label">{t('form.importe')} {req}</label>
             <div className="amount-wrap">
               <span className="amount-prefix">$</span>
               <input
@@ -110,12 +112,12 @@ export default function Registrar({ onSubmit, onCancel, initial = null, submitLa
                 onChange={(e) => update('importe', e.target.value)}
               />
             </div>
-            {form.errors.importe && <div className="field__error">Indica un importe válido</div>}
+            {form.errors.importe && <div className="field__error">{t('err.importe')}</div>}
           </div>
 
           {/* Fecha */}
           <div>
-            <label className="field__label">Fecha</label>
+            <label className="field__label">{t('form.fecha')}</label>
             <input
               type="date"
               className="input"
@@ -126,61 +128,55 @@ export default function Registrar({ onSubmit, onCancel, initial = null, submitLa
 
           {/* Proyecto */}
           <div>
-            <label className="field__label">
-              Proyecto <span className="field__required">*</span>
-            </label>
+            <label className="field__label">{t('form.proyecto')} {req}</label>
             <select
               className="select"
               value={form.proyecto}
               onChange={(e) => update('proyecto', e.target.value)}
             >
-              <option value="">Selecciona…</option>
+              <option value="">{t('form.selecciona')}</option>
               {PROYECTOS_FORM.map((p) => (
                 <option key={p} value={p}>
-                  {p}
+                  {tProject(p)}
                 </option>
               ))}
             </select>
-            {form.errors.proyecto && <div className="field__error">Selecciona un proyecto</div>}
+            {form.errors.proyecto && <div className="field__error">{t('err.proyecto')}</div>}
           </div>
 
           {/* Categoría */}
           <div>
-            <label className="field__label">
-              Categoría <span className="field__required">*</span>
-            </label>
+            <label className="field__label">{t('form.categoria')} {req}</label>
             <select
               className="select"
               value={form.categoria}
               onChange={(e) => update('categoria', e.target.value)}
             >
-              <option value="">Selecciona…</option>
+              <option value="">{t('form.selecciona')}</option>
               {CATEGORIAS.map((c) => (
                 <option key={c} value={c}>
-                  {c}
+                  {tCategory(c)}
                 </option>
               ))}
             </select>
-            {form.errors.categoria && <div className="field__error">Selecciona una categoría</div>}
+            {form.errors.categoria && <div className="field__error">{t('err.categoria')}</div>}
           </div>
 
           {/* Proveedor */}
           <div>
-            <label className="field__label">
-              Proveedor <span className="field__required">*</span>
-            </label>
+            <label className="field__label">{t('form.proveedor')} {req}</label>
             <input
               className="input"
-              placeholder="Comercio o proveedor"
+              placeholder={t('form.ph.proveedor')}
               value={form.proveedor}
               onChange={(e) => update('proveedor', e.target.value)}
             />
-            {form.errors.proveedor && <div className="field__error">Indica el proveedor</div>}
+            {form.errors.proveedor && <div className="field__error">{t('err.proveedor')}</div>}
           </div>
 
           {/* Método de pago */}
           <div>
-            <label className="field__label">Método de pago</label>
+            <label className="field__label">{t('form.metodo')}</label>
             <select
               className="select"
               value={form.metodo}
@@ -188,7 +184,7 @@ export default function Registrar({ onSubmit, onCancel, initial = null, submitLa
             >
               {METODOS.map((m) => (
                 <option key={m} value={m}>
-                  {m}
+                  {tMethod(m)}
                 </option>
               ))}
             </select>
@@ -196,10 +192,10 @@ export default function Registrar({ onSubmit, onCancel, initial = null, submitLa
 
           {/* Pagado por */}
           <div>
-            <label className="field__label">Pagado por</label>
+            <label className="field__label">{t('form.pagadoPor')}</label>
             <input
               className="input"
-              placeholder="Quién hizo el pago"
+              placeholder={t('form.ph.pagadoPor')}
               value={form.pagadoPor}
               onChange={(e) => update('pagadoPor', e.target.value)}
             />
@@ -208,23 +204,21 @@ export default function Registrar({ onSubmit, onCancel, initial = null, submitLa
 
         {/* Descripción */}
         <div className="field--full">
-          <label className="field__label">
-            Descripción <span className="field__required">*</span>
-          </label>
+          <label className="field__label">{t('form.descripcion')} {req}</label>
           <textarea
             className="textarea"
             rows={2}
-            placeholder="Qué se compró y para qué"
+            placeholder={t('form.ph.descripcion')}
             value={form.descripcion}
             onChange={(e) => update('descripcion', e.target.value)}
           />
-          {form.errors.descripcion && <div className="field__error">Añade una descripción</div>}
+          {form.errors.descripcion && <div className="field__error">{t('err.descripcion')}</div>}
         </div>
 
         <div className="form-grid field--full">
           {/* Estado */}
           <div>
-            <label className="field__label">Estado</label>
+            <label className="field__label">{t('form.estado')}</label>
             <div className="segmented">
               <button
                 type="button"
@@ -232,7 +226,7 @@ export default function Registrar({ onSubmit, onCancel, initial = null, submitLa
                 onClick={() => update('estado', 'Recibido')}
               >
                 <Check aria-hidden />
-                Recibido
+                {tStatus('Recibido')}
               </button>
               <button
                 type="button"
@@ -240,14 +234,14 @@ export default function Registrar({ onSubmit, onCancel, initial = null, submitLa
                 onClick={() => update('estado', 'En envío')}
               >
                 <Truck aria-hidden />
-                En envío
+                {tStatus('En envío')}
               </button>
             </div>
           </div>
 
           {/* Comprobante / factura */}
           <div>
-            <label className="field__label">Comprobante o factura</label>
+            <label className="field__label">{t('form.recibo')}</label>
             <label className="dropzone">
               <input type="file" accept="image/*,application/pdf" onChange={onRecibo} />
               {form.recibo ? (
@@ -262,7 +256,7 @@ export default function Registrar({ onSubmit, onCancel, initial = null, submitLa
               ) : (
                 <div className="dropzone__hint">
                   <Upload aria-hidden />
-                  <span>Subir comprobante o factura (foto o PDF)</span>
+                  <span>{t('form.upload')}</span>
                 </div>
               )}
             </label>
@@ -272,10 +266,10 @@ export default function Registrar({ onSubmit, onCancel, initial = null, submitLa
 
         <div className="form-actions">
           <button type="button" className="btn btn--secondary" onClick={onCancel}>
-            Cancelar
+            {t('form.cancel')}
           </button>
           <button type="button" className="btn btn--save" onClick={submit}>
-            {submitLabel}
+            {initial ? t('form.saveChanges') : t('form.save')}
           </button>
         </div>
       </div>

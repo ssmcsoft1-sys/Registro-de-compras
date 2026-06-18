@@ -1,36 +1,35 @@
 import { useMemo, useState } from 'react'
 import { Search, X, Check, Truck, Inbox, Trash2, Pencil, Receipt, Download } from 'lucide-react'
-import { fmtMoney, fmtDate, projShort } from '../lib/format.js'
 import { filterRows, monthsFromPurchases, currentMonthKey } from '../lib/selectors.js'
-import { PROYECTOS_FORM, CATEGORIAS, PROJ_COLORS, MES_LARGO } from '../lib/constants.js'
+import { PROYECTOS_FORM, CATEGORIAS, PROJ_COLORS } from '../lib/constants.js'
+import { useSettings } from '../lib/settings.jsx'
 import Registrar from './Registrar.jsx'
 
 const ALL_FILTERS = { q: '', fMonth: 'all', fProyecto: 'all', fCategoria: 'all' }
 // Al abrir, mostramos solo el mes actual.
 const initialFilters = () => ({ ...ALL_FILTERS, fMonth: currentMonthKey() })
 
+const isImage = (url) => url.startsWith('data:image/')
+
 // Etiqueta de estado, clicable para alternar Recibido ⇄ En envío.
 function StatusChip({ estado, onToggle }) {
+  const { t, tStatus } = useSettings()
   const recibido = estado === 'Recibido'
   return (
     <button
       type="button"
       className={`status-chip status-chip--btn ${recibido ? 'status-chip--recibido' : 'status-chip--envio'}`}
       onClick={onToggle}
-      title={recibido ? 'Marcar como En envío' : 'Marcar como Recibido'}
+      title={recibido ? t('hist.statusToTransit') : t('hist.statusToReceived')}
     >
       {recibido ? <Check aria-hidden /> : <Truck aria-hidden />}
-      {estado}
+      {tStatus(estado)}
     </button>
   )
 }
 
-const isImage = (url) => url.startsWith('data:image/')
-
-// Línea secundaria: proveedor y, si se indicó, quién hizo el pago.
-const subLabel = (r) => (r.pagadoPor ? `${r.proveedor} · Pagó: ${r.pagadoPor}` : r.proveedor)
-
 export default function Historial({ purchases, onDelete, onEdit }) {
+  const { t, money, formatDate, monthsLong, tProject, tCategory, tMethod, projShort } = useSettings()
   const [filters, setFilters] = useState(initialFilters)
   const [editing, setEditing] = useState(null)
   const [receipt, setReceipt] = useState(null)
@@ -41,14 +40,20 @@ export default function Historial({ purchases, onDelete, onEdit }) {
   // Opciones de mes derivadas de los datos (incluye el mes actual), más recientes primero.
   const monthOptions = useMemo(() => {
     const opts = monthsFromPurchases(purchases)
-      .map((k) => ({ value: k, label: `${MES_LARGO[+k.slice(5) - 1]} ${k.slice(0, 4)}` }))
+      .map((k) => ({ value: k, label: `${monthsLong[+k.slice(5) - 1]} ${k.slice(0, 4)}` }))
       .reverse()
-    return [{ value: 'all', label: 'Todos los meses' }, ...opts]
-  }, [purchases])
+    return [{ value: 'all', label: t('hist.allMonths') }, ...opts]
+  }, [purchases, monthsLong, t])
+
+  const subLabel = (r) => (r.pagadoPor ? `${r.proveedor} · ${t('hist.paidBy')}: ${r.pagadoPor}` : r.proveedor)
 
   const handleDelete = (row) => {
     const ok = window.confirm(
-      `¿Eliminar esta compra?\n\n${row.descripcion}\n${fmtDate(row.fecha)} · ${fmtMoney(row.importe)}\n\nEsta acción no se puede deshacer.`,
+      t('hist.deleteConfirm', {
+        desc: row.descripcion,
+        date: formatDate(row.fecha),
+        amount: money(row.importe),
+      }),
     )
     if (ok) onDelete(row.id)
   }
@@ -65,7 +70,7 @@ export default function Historial({ purchases, onDelete, onEdit }) {
           <Search className="search__icon" aria-hidden />
           <input
             className="search__input"
-            placeholder="Buscar descripción o proveedor"
+            placeholder={t('hist.search')}
             value={filters.q}
             onChange={set('q')}
           />
@@ -78,18 +83,18 @@ export default function Historial({ purchases, onDelete, onEdit }) {
           ))}
         </select>
         <select className="filter-select" value={filters.fProyecto} onChange={set('fProyecto')}>
-          <option value="all">Todos los proyectos</option>
+          <option value="all">{t('hist.allProjects')}</option>
           {PROYECTOS_FORM.map((p) => (
             <option key={p} value={p}>
-              {p}
+              {tProject(p)}
             </option>
           ))}
         </select>
         <select className="filter-select" value={filters.fCategoria} onChange={set('fCategoria')}>
-          <option value="all">Todas las categorías</option>
+          <option value="all">{t('hist.allCategories')}</option>
           {CATEGORIAS.map((c) => (
             <option key={c} value={c}>
-              {c}
+              {tCategory(c)}
             </option>
           ))}
         </select>
@@ -98,42 +103,42 @@ export default function Historial({ purchases, onDelete, onEdit }) {
       {/* Results summary */}
       <div className="results-bar">
         <span className="results-summary">
-          {rows.length} compras · <span className="results-total">{fmtMoney(total)}</span>
+          {rows.length} {t('common.purchases')} · <span className="results-total">{money(total)}</span>
         </span>
         <button type="button" className="btn btn--ghost" onClick={() => setFilters(ALL_FILTERS)}>
           <X size={14} aria-hidden />
-          Limpiar filtros
+          {t('hist.clear')}
         </button>
       </div>
 
       {/* Table */}
       <div className="table-card">
         <div className="table-head">
-          <span>FECHA</span>
-          <span>PROYECTO</span>
-          <span>CATEGORÍA</span>
-          <span>MÉTODO</span>
-          <span>DESCRIPCIÓN</span>
-          <span className="num">IMPORTE</span>
-          <span>ESTADO</span>
-          <span className="sr-only">ACCIONES</span>
+          <span>{t('hist.col.fecha')}</span>
+          <span>{t('hist.col.proyecto')}</span>
+          <span>{t('hist.col.categoria')}</span>
+          <span>{t('hist.col.metodo')}</span>
+          <span>{t('hist.col.descripcion')}</span>
+          <span className="num">{t('hist.col.importe')}</span>
+          <span>{t('hist.col.estado')}</span>
+          <span className="sr-only">{t('hist.edit')}</span>
         </div>
 
         {rows.length > 0 ? (
           rows.map((r) => (
             <div className="table-row" key={r.id}>
-              <span className="cell-date">{fmtDate(r.fecha)}</span>
+              <span className="cell-date">{formatDate(r.fecha)}</span>
               <span className="cell-proj">
                 <span className="cell-proj__dot" style={{ '--c': PROJ_COLORS[r.proyecto] }} />
                 {projShort(r.proyecto)}
               </span>
-              <span className="cell-cat" title={r.categoria}>{r.categoria}</span>
-              <span className="cell-method" title={r.metodo}>{r.metodo}</span>
+              <span className="cell-cat" title={tCategory(r.categoria)}>{tCategory(r.categoria)}</span>
+              <span className="cell-method" title={tMethod(r.metodo)}>{tMethod(r.metodo)}</span>
               <div className="cell-desc">
                 <div className="cell-desc__main" title={r.descripcion}>{r.descripcion}</div>
                 <div className="cell-desc__sub" title={subLabel(r)}>{subLabel(r)}</div>
               </div>
-              <span className="cell-amount">{fmtMoney(r.importe)}</span>
+              <span className="cell-amount">{money(r.importe)}</span>
               <StatusChip estado={r.estado} onToggle={() => toggleEstado(r)} />
               <div className="row-actions">
                 {r.recibo && (
@@ -141,8 +146,8 @@ export default function Historial({ purchases, onDelete, onEdit }) {
                     type="button"
                     className="row-action"
                     onClick={() => setReceipt(r)}
-                    aria-label={`Ver comprobante de: ${r.descripcion}`}
-                    title="Ver comprobante"
+                    aria-label={t('hist.viewReceipt')}
+                    title={t('hist.viewReceipt')}
                   >
                     <Receipt aria-hidden />
                   </button>
@@ -151,8 +156,8 @@ export default function Historial({ purchases, onDelete, onEdit }) {
                   type="button"
                   className="row-action"
                   onClick={() => setEditing(r)}
-                  aria-label={`Editar compra: ${r.descripcion}`}
-                  title="Editar compra"
+                  aria-label={t('hist.edit')}
+                  title={t('hist.edit')}
                 >
                   <Pencil aria-hidden />
                 </button>
@@ -160,8 +165,8 @@ export default function Historial({ purchases, onDelete, onEdit }) {
                   type="button"
                   className="row-action row-action--danger"
                   onClick={() => handleDelete(r)}
-                  aria-label={`Eliminar compra: ${r.descripcion}`}
-                  title="Eliminar compra"
+                  aria-label={t('hist.delete')}
+                  title={t('hist.delete')}
                 >
                   <Trash2 aria-hidden />
                 </button>
@@ -171,8 +176,8 @@ export default function Historial({ purchases, onDelete, onEdit }) {
         ) : (
           <div className="empty">
             <Inbox aria-hidden />
-            <div className="empty__title">Sin resultados</div>
-            <div className="empty__sub">Prueba a cambiar los filtros</div>
+            <div className="empty__title">{t('hist.empty.title')}</div>
+            <div className="empty__sub">{t('hist.empty.sub')}</div>
           </div>
         )}
       </div>
@@ -182,19 +187,18 @@ export default function Historial({ purchases, onDelete, onEdit }) {
         <div className="modal-overlay" onClick={() => setEditing(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal__head">
-              <h2 className="modal__title">Editar compra</h2>
+              <h2 className="modal__title">{t('hist.edit')}</h2>
               <button
                 type="button"
                 className="modal__close"
                 onClick={() => setEditing(null)}
-                aria-label="Cerrar"
+                aria-label={t('hist.close')}
               >
                 <X aria-hidden />
               </button>
             </div>
             <Registrar
               initial={editing}
-              submitLabel="Guardar cambios"
               onCancel={() => setEditing(null)}
               onSubmit={async (fields) => {
                 const ok = await onEdit(editing.id, fields)
@@ -210,7 +214,7 @@ export default function Historial({ purchases, onDelete, onEdit }) {
         <div className="modal-overlay" onClick={() => setReceipt(null)}>
           <div className="modal modal--receipt" onClick={(e) => e.stopPropagation()}>
             <div className="modal__head">
-              <h2 className="modal__title">Comprobante · {receipt.descripcion}</h2>
+              <h2 className="modal__title">{t('hist.receipt')} · {receipt.descripcion}</h2>
               <div className="modal__actions">
                 <a
                   className="receipt-download"
@@ -218,13 +222,13 @@ export default function Historial({ purchases, onDelete, onEdit }) {
                   download={receipt.recibo.name}
                 >
                   <Download aria-hidden />
-                  Descargar
+                  {t('hist.download')}
                 </a>
                 <button
                   type="button"
                   className="modal__close"
                   onClick={() => setReceipt(null)}
-                  aria-label="Cerrar"
+                  aria-label={t('hist.close')}
                 >
                   <X aria-hidden />
                 </button>

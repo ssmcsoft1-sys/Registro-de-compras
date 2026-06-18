@@ -251,6 +251,44 @@ textarea {
   opacity: 0.6;
   cursor: default;
 }
+.login__lang {
+  margin-top: 18px;
+}
+
+/* ---------- Selectores de idioma / moneda ---------- */
+.sidebar__settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 2px 10px;
+}
+.switch {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-surface-2);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+}
+.switch__btn {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-pill);
+  padding: 6px 8px;
+  font: 700 12px var(--font-display);
+  color: var(--yago-gray-500);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+.switch__btn:hover:not(.switch__btn--active) {
+  color: var(--yago-indigo-700);
+}
+.switch__btn--active {
+  background: var(--bg-primary);
+  color: var(--fg-on-primary);
+}
 
 /* ---------- Main / Header / Content ---------- */
 .main {

@@ -8,7 +8,6 @@ import {
   CATEGORIAS,
   PROJ_COLORS,
   CAT_COLORS,
-  MES,
   MONTH_KEYS,
 } from './constants.js'
 
@@ -84,7 +83,7 @@ export function byCategoria(purchases) {
 export function byMonth(purchases, monthProject) {
   const months = monthsFromPurchases(purchases)
   const sums = months.map((k) => ({
-    label: MES[+k.slice(5) - 1],
+    month: +k.slice(5) - 1, // índice de mes (0-11) para traducir en la vista
     amount: purchases
       .filter((p) => p.fecha.slice(0, 7) === k && (monthProject === 'all' || p.proyecto === monthProject))
       .reduce((a, p) => a + p.importe, 0),
@@ -95,18 +94,13 @@ export function byMonth(purchases, monthProject) {
     monthProject === 'all' ? 'var(--yago-gradient-bar)' : PROJ_COLORS[monthProject]
 
   const bars = sums.map((x) => ({
-    label: x.label,
+    month: x.month,
     amount: x.amount,
     pct: Math.max(3, Math.round((x.amount / max) * 100)),
     barBg,
   }))
 
-  const caption =
-    monthProject === 'all'
-      ? 'Mostrando el total de todos los proyectos'
-      : `Gasto mensual de ${monthProject}`
-
-  return { bars, caption }
+  return { bars }
 }
 
 // Historial: combinable filters (mes + proyecto + categoría + búsqueda),
