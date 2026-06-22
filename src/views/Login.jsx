@@ -15,9 +15,9 @@ export default function Login({ onSuccess }) {
     e.preventDefault()
     setLoading(true)
     setError(false)
-    const ok = await login(password)
+    const role = await login(password)
     setLoading(false)
-    if (ok) onSuccess()
+    if (role) onSuccess(role)
     else setError(true)
   }
 
