@@ -14,3 +14,10 @@ export const getPurchase = adapter.getPurchase
 export const insertPurchase = adapter.insertPurchase
 export const updatePurchase = adapter.updatePurchase
 export const deletePurchase = adapter.deletePurchase
+
+export const getAllRequests = adapter.getAllRequests
+export const getRequest = adapter.getRequest
+export const insertRequest = adapter.insertRequest
+export const rejectRequest = adapter.rejectRequest
+export const markRequestBought = adapter.markRequestBought
+export const deleteRequest = adapter.deleteRequest

@@ -43,7 +43,7 @@ function buildForm(initial) {
 
 const MAX_RECIBO_BYTES = 2 * 1024 * 1024 // 2 MB
 
-export default function Registrar({ onSubmit, onCancel, initial = null }) {
+export default function Registrar({ onSubmit, onCancel, initial = null, submitLabel = null }) {
   const { t, tProject, tCategory, tMethod, tStatus } = useSettings()
   const [form, setForm] = useState(() => buildForm(initial))
   const [reciboError, setReciboError] = useState('')
@@ -269,7 +269,7 @@ export default function Registrar({ onSubmit, onCancel, initial = null }) {
             {t('form.cancel')}
           </button>
           <button type="button" className="btn btn--save" onClick={submit}>
-            {initial ? t('form.saveChanges') : t('form.save')}
+            {submitLabel ?? (initial ? t('form.saveChanges') : t('form.save'))}
           </button>
         </div>
       </div>

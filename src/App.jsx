@@ -5,6 +5,7 @@ import Toast from './components/Toast.jsx'
 import Resumen from './views/Resumen.jsx'
 import Registrar from './views/Registrar.jsx'
 import Historial from './views/Historial.jsx'
+import Solicitudes from './views/Solicitudes.jsx'
 import Login from './views/Login.jsx'
 import { useSettings } from './lib/settings.jsx'
 import {
@@ -15,14 +16,22 @@ import {
   createPurchase,
   updatePurchase as apiUpdatePurchase,
   deletePurchase as apiDeletePurchase,
+  fetchRequests,
+  createRequest as apiCreateRequest,
+  rejectRequest as apiRejectRequest,
+  buyRequest as apiBuyRequest,
+  deleteRequest as apiDeleteRequest,
 } from './lib/api.js'
+
+const defaultView = (role) => (role === 'manager' ? 'resumen' : 'solicitudes')
 
 export default function App() {
   const { t } = useSettings()
-  const [authed, setAuthed] = useState(null) // null = comprobando, true/false = resultado
+  const [role, setRole] = useState(undefined) // undefined = comprobando, null = sin sesión
   const [view, setView] = useState('resumen')
   const [purchases, setPurchases] = useState([])
-  const [status, setStatus] = useState('loading') // loading | ready | error
+  const [requests, setRequests] = useState([])
+  const [status, setStatus] = useState('loading')
   const [toast, setToast] = useState(null)
   const toastTimer = useRef(null)
 
@@ -34,49 +43,57 @@ export default function App() {
 
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
-  // Carga de compras desde el servidor. Si la sesión caducó, vuelve al login.
-  const load = useCallback(() => {
+  // Carga inicial: compras (solo responsable) + solicitudes (todos).
+  const load = useCallback((r) => {
     setStatus('loading')
-    fetchPurchases()
-      .then((data) => {
-        setPurchases(data)
+    const purchasesP = r === 'manager' ? fetchPurchases() : Promise.resolve([])
+    Promise.all([purchasesP, fetchRequests()])
+      .then(([p, reqs]) => {
+        setPurchases(p)
+        setRequests(reqs)
         setStatus('ready')
       })
       .catch((e) => {
-        if (e instanceof AuthError) setAuthed(false)
+        if (e instanceof AuthError) setRole(null)
         else setStatus('error')
       })
   }, [])
 
-  // Al arrancar: comprobar si hay sesión iniciada.
   useEffect(() => {
-    checkSession().then((ok) => {
-      setAuthed(ok)
-      if (ok) load()
+    checkSession().then((r) => {
+      setRole(r)
+      if (r) {
+        setView(defaultView(r))
+        load(r)
+      }
     })
   }, [load])
 
-  const handleLoginSuccess = useCallback(() => {
-    setAuthed(true)
-    load()
-  }, [load])
+  const handleLoginSuccess = useCallback(
+    (r) => {
+      setRole(r)
+      setView(defaultView(r))
+      load(r)
+    },
+    [load],
+  )
 
   const handleLogout = useCallback(async () => {
     await apiLogout()
-    setAuthed(false)
+    setRole(null)
     setPurchases([])
-    setView('resumen')
+    setRequests([])
   }, [])
 
-  // Si una acción devuelve AuthError, la sesión caducó: volver al login.
   const onAuthError = useCallback((e) => {
     if (e instanceof AuthError) {
-      setAuthed(false)
+      setRole(null)
       return true
     }
     return false
   }, [])
 
+  // ── Compras (responsable) ──
   const addPurchase = useCallback(
     async (purchase) => {
       try {
@@ -119,16 +136,74 @@ export default function App() {
     [showToast, onAuthError, t],
   )
 
-  if (authed === null) {
+  // ── Solicitudes ──
+  const addRequest = useCallback(
+    async (request) => {
+      try {
+        const saved = await apiCreateRequest(request)
+        setRequests((prev) => [saved, ...prev])
+        showToast(t('toast.reqCreated'))
+        return true
+      } catch (e) {
+        if (!onAuthError(e)) showToast(t('toast.reqError'))
+        return false
+      }
+    },
+    [showToast, onAuthError, t],
+  )
+
+  const rejectRequest = useCallback(
+    async (id, nota) => {
+      try {
+        const updated = await apiRejectRequest(id, nota)
+        setRequests((prev) => prev.map((r) => (r.id === id ? updated : r)))
+        showToast(t('toast.reqRejected'))
+      } catch (e) {
+        if (!onAuthError(e)) showToast(t('toast.reqError'))
+      }
+    },
+    [showToast, onAuthError, t],
+  )
+
+  const buyRequest = useCallback(
+    async (id, purchaseFields) => {
+      try {
+        const { request, purchase } = await apiBuyRequest(id, purchaseFields)
+        setPurchases((prev) => [purchase, ...prev])
+        setRequests((prev) => prev.map((r) => (r.id === id ? request : r)))
+        showToast(t('toast.bought'))
+        return true
+      } catch (e) {
+        if (!onAuthError(e)) showToast(t('toast.reqError'))
+        return false
+      }
+    },
+    [showToast, onAuthError, t],
+  )
+
+  const deleteRequest = useCallback(
+    async (id) => {
+      try {
+        await apiDeleteRequest(id)
+        setRequests((prev) => prev.filter((r) => r.id !== id))
+        showToast(t('toast.reqDeleted'))
+      } catch (e) {
+        if (!onAuthError(e)) showToast(t('toast.reqError'))
+      }
+    },
+    [showToast, onAuthError, t],
+  )
+
+  if (role === undefined) {
     return <div className="boot">{t('app.booting')}</div>
   }
-  if (!authed) {
+  if (!role) {
     return <Login onSuccess={handleLoginSuccess} />
   }
 
   return (
     <div className="app">
-      <Sidebar view={view} onNavigate={setView} onLogout={handleLogout} />
+      <Sidebar role={role} view={view} onNavigate={setView} onLogout={handleLogout} />
       <main className="main">
         <Header view={view} onRegister={() => setView('registrar')} />
         <div className="scroll-area">
@@ -137,22 +212,28 @@ export default function App() {
             {status === 'error' && (
               <div className="state-msg state-msg--error">
                 {t('app.connError')}
-                <button type="button" className="btn btn--secondary" onClick={load}>
+                <button type="button" className="btn btn--secondary" onClick={() => load(role)}>
                   {t('app.retry')}
                 </button>
               </div>
             )}
             {status === 'ready' && (
               <>
-                {view === 'resumen' && <Resumen purchases={purchases} />}
-                {view === 'registrar' && (
+                {view === 'resumen' && role === 'manager' && <Resumen purchases={purchases} />}
+                {view === 'registrar' && role === 'manager' && (
                   <Registrar onSubmit={addPurchase} onCancel={() => setView('resumen')} />
                 )}
-                {view === 'historial' && (
-                  <Historial
-                    purchases={purchases}
-                    onDelete={deletePurchase}
-                    onEdit={editPurchase}
+                {view === 'historial' && role === 'manager' && (
+                  <Historial purchases={purchases} onDelete={deletePurchase} onEdit={editPurchase} />
+                )}
+                {view === 'solicitudes' && (
+                  <Solicitudes
+                    requests={requests}
+                    role={role}
+                    onCreate={addRequest}
+                    onReject={rejectRequest}
+                    onBuy={buyRequest}
+                    onDelete={deleteRequest}
                   />
                 )}
               </>

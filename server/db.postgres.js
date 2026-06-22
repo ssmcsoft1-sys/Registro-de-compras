@@ -49,6 +49,23 @@ await pool.query(`
 `)
 await pool.query('ALTER TABLE purchases ADD COLUMN IF NOT EXISTS pagado_por text')
 
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS requests (
+    id               text PRIMARY KEY,
+    created_at       text NOT NULL,
+    solicitante      text NOT NULL,
+    proyecto         text NOT NULL,
+    categoria        text NOT NULL,
+    descripcion      text NOT NULL,
+    importe_estimado double precision,
+    nota             text,
+    estado           text NOT NULL,
+    nota_responsable text,
+    compra_id        text,
+    decided_at       text
+  );
+`)
+
 const { rows: countRows } = await pool.query('SELECT COUNT(*)::int AS n FROM purchases')
 if (countRows[0].n === 0) {
   for (const p of seedPurchases()) {
@@ -108,5 +125,74 @@ export async function insertPurchase(p) {
 
 export async function deletePurchase(id) {
   const { rowCount } = await pool.query('DELETE FROM purchases WHERE id = $1', [id])
+  return rowCount > 0
+}
+
+// ── Solicitudes ──
+function rowToRequest(row) {
+  return {
+    id: row.id,
+    created_at: row.created_at,
+    solicitante: row.solicitante,
+    proyecto: row.proyecto,
+    categoria: row.categoria,
+    descripcion: row.descripcion,
+    importeEstimado: row.importe_estimado ?? null,
+    nota: row.nota ?? null,
+    estado: row.estado,
+    notaResponsable: row.nota_responsable ?? null,
+    compraId: row.compra_id ?? null,
+    decidedAt: row.decided_at ?? null,
+    compraEstado: row.compra_estado ?? null,
+  }
+}
+
+const REQUESTS_SELECT = `
+  SELECT r.*, p.estado AS compra_estado
+  FROM requests r LEFT JOIN purchases p ON p.id = r.compra_id
+`
+
+export async function getAllRequests() {
+  const { rows } = await pool.query(`${REQUESTS_SELECT} ORDER BY r.created_at DESC`)
+  return rows.map(rowToRequest)
+}
+
+export async function getRequest(id) {
+  const { rows } = await pool.query(`${REQUESTS_SELECT} WHERE r.id = $1`, [id])
+  return rows[0] ? rowToRequest(rows[0]) : null
+}
+
+export async function insertRequest(r) {
+  await pool.query(
+    `INSERT INTO requests
+      (id, created_at, solicitante, proyecto, categoria, descripcion, importe_estimado, nota, estado, nota_responsable, compra_id, decided_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+    [r.id, r.created_at, r.solicitante, r.proyecto, r.categoria, r.descripcion, r.importeEstimado ?? null, r.nota ?? null, 'Pendiente', null, null, null],
+  )
+  return getRequest(r.id)
+}
+
+export async function rejectRequest(id, notaResponsable, decidedAt) {
+  await pool.query('UPDATE requests SET estado = $1, nota_responsable = $2, decided_at = $3 WHERE id = $4', [
+    'Rechazada',
+    notaResponsable ?? null,
+    decidedAt,
+    id,
+  ])
+  return getRequest(id)
+}
+
+export async function markRequestBought(id, compraId, decidedAt) {
+  await pool.query('UPDATE requests SET estado = $1, compra_id = $2, decided_at = $3 WHERE id = $4', [
+    'Comprada',
+    compraId,
+    decidedAt,
+    id,
+  ])
+  return getRequest(id)
+}
+
+export async function deleteRequest(id) {
+  const { rowCount } = await pool.query('DELETE FROM requests WHERE id = $1', [id])
   return rowCount > 0
 }

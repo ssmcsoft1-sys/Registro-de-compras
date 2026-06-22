@@ -1166,3 +1166,90 @@ textarea {
   height: 18px;
   color: var(--yago-green-300);
 }
+
+/* ============================================================
+   SOLICITUDES
+   ============================================================ */
+.btn--sm {
+  height: 38px;
+  padding: 0 16px;
+  font-size: 13px;
+}
+
+.solicitudes {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.sol-form__title {
+  margin: 0 0 18px;
+}
+.sol-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sol-card {
+  background: var(--bg-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+.sol-card__main {
+  min-width: 0;
+  flex: 1;
+}
+.sol-card__title {
+  font: 700 15px var(--font-display);
+  color: var(--fg-1);
+  margin-bottom: 4px;
+}
+.sol-meta {
+  font: 500 13px var(--font-display);
+  color: var(--yago-gray-500);
+}
+.sol-note {
+  font: 500 13px var(--font-display);
+  color: var(--yago-gray-600);
+  margin-top: 8px;
+  font-style: italic;
+}
+.sol-note--manager {
+  font-style: normal;
+  color: var(--yago-magenta-500);
+}
+.sol-card__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+.sol-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  font: 700 12px var(--font-display);
+  white-space: nowrap;
+}
+.sol-badge--pending {
+  background: var(--yago-yellow-tint);
+  color: var(--yago-yellow-burnt);
+}
+.sol-badge--bought {
+  background: var(--yago-green-tint);
+  color: var(--yago-green-500);
+}
+.sol-badge--rejected {
+  background: var(--yago-gray-50);
+  color: var(--yago-gray-500);
+}
+.sol-actions {
+  display: flex;
+  gap: 8px;
+}

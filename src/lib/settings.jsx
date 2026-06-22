@@ -14,6 +14,7 @@ import {
   translateCategory,
   translateMethod,
   translateStatus,
+  translateReqStatus,
   translateProject,
   projectShort,
 } from './i18n.js'
@@ -98,6 +99,7 @@ export function SettingsProvider({ children }) {
       tCategory: (v) => translateCategory(v, lang),
       tMethod: (v) => translateMethod(v, lang),
       tStatus: (v) => translateStatus(v, lang),
+      tReqStatus: (v) => translateReqStatus(v, lang),
       tProject: (v) => translateProject(v, lang),
       projShort: (v) => projectShort(v, lang),
     }

@@ -13,14 +13,14 @@ async function ensureOk(res, message) {
   return res
 }
 
-// ── Sesión ──
+// ── Sesión ── (devuelven el rol: 'manager' | 'team' | null)
 export async function checkSession() {
   try {
     const res = await fetch('/api/session')
     const data = await res.json()
-    return !!data.authed
+    return data.authed ? data.role : null
   } catch {
-    return false
+    return null
   }
 }
 
@@ -30,11 +30,57 @@ export async function login(password) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password }),
   })
-  return res.ok
+  if (!res.ok) return null
+  const data = await res.json()
+  return data.role
 }
 
 export async function logout() {
   await fetch('/api/logout', { method: 'POST' })
+}
+
+// ── Solicitudes ──
+const RBASE = '/api/requests'
+
+export async function fetchRequests() {
+  const res = await fetch(RBASE)
+  await ensureOk(res, 'No se pudieron cargar las solicitudes')
+  return res.json()
+}
+
+export async function createRequest(request) {
+  const res = await fetch(RBASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  await ensureOk(res, 'No se pudo crear la solicitud')
+  return res.json()
+}
+
+export async function rejectRequest(id, notaResponsable) {
+  const res = await fetch(`${RBASE}/${id}/reject`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notaResponsable }),
+  })
+  await ensureOk(res, 'No se pudo rechazar la solicitud')
+  return res.json()
+}
+
+export async function buyRequest(id, purchase) {
+  const res = await fetch(`${RBASE}/${id}/buy`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(purchase),
+  })
+  await ensureOk(res, 'No se pudo registrar la compra')
+  return res.json()
+}
+
+export async function deleteRequest(id) {
+  const res = await fetch(`${RBASE}/${id}`, { method: 'DELETE' })
+  await ensureOk(res, 'No se pudo eliminar la solicitud')
 }
 
 // ── Compras ──

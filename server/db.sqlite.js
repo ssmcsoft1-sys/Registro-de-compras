@@ -38,6 +38,24 @@ if (!cols.includes('pagadoPor')) {
   db.exec('ALTER TABLE purchases ADD COLUMN pagadoPor TEXT')
 }
 
+// Solicitudes de compra (flujo: Pendiente -> Comprada | Rechazada).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS requests (
+    id              TEXT PRIMARY KEY,
+    created_at      TEXT NOT NULL,
+    solicitante     TEXT NOT NULL,
+    proyecto        TEXT NOT NULL,
+    categoria       TEXT NOT NULL,
+    descripcion     TEXT NOT NULL,
+    importeEstimado REAL,
+    nota            TEXT,
+    estado          TEXT NOT NULL,
+    notaResponsable TEXT,
+    compraId        TEXT,
+    decidedAt       TEXT
+  );
+`)
+
 // Siembra inicial: si la tabla está vacía, carga las compras de ejemplo.
 const { n } = db.prepare('SELECT COUNT(*) AS n FROM purchases').get()
 if (n === 0) {
@@ -117,5 +135,68 @@ export async function insertPurchase(p) {
 
 export async function deletePurchase(id) {
   const info = db.prepare('DELETE FROM purchases WHERE id = ?').run(id)
+  return info.changes > 0
+}
+
+// ── Solicitudes ──
+function rowToRequest(row) {
+  return {
+    id: row.id,
+    created_at: row.created_at,
+    solicitante: row.solicitante,
+    proyecto: row.proyecto,
+    categoria: row.categoria,
+    descripcion: row.descripcion,
+    importeEstimado: row.importeEstimado ?? null,
+    nota: row.nota ?? null,
+    estado: row.estado,
+    notaResponsable: row.notaResponsable ?? null,
+    compraId: row.compraId ?? null,
+    decidedAt: row.decidedAt ?? null,
+    compraEstado: row.compraEstado ?? null, // estado de envío de la compra ligada
+  }
+}
+
+const REQUESTS_SELECT = `
+  SELECT r.*, p.estado AS compraEstado
+  FROM requests r LEFT JOIN purchases p ON p.id = r.compraId
+`
+
+export async function getAllRequests() {
+  const rows = db.prepare(`${REQUESTS_SELECT} ORDER BY r.created_at DESC`).all()
+  return rows.map(rowToRequest)
+}
+
+export async function getRequest(id) {
+  const row = db.prepare(`${REQUESTS_SELECT} WHERE r.id = ?`).get(id)
+  return row ? rowToRequest(row) : null
+}
+
+export async function insertRequest(r) {
+  db.prepare(`
+    INSERT INTO requests
+      (id, created_at, solicitante, proyecto, categoria, descripcion, importeEstimado, nota, estado, notaResponsable, compraId, decidedAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    r.id, r.created_at, r.solicitante, r.proyecto, r.categoria, r.descripcion,
+    r.importeEstimado ?? null, r.nota ?? null, 'Pendiente', null, null, null,
+  )
+  return getRequest(r.id)
+}
+
+export async function rejectRequest(id, notaResponsable, decidedAt) {
+  db.prepare('UPDATE requests SET estado = ?, notaResponsable = ?, decidedAt = ? WHERE id = ?')
+    .run('Rechazada', notaResponsable ?? null, decidedAt, id)
+  return getRequest(id)
+}
+
+export async function markRequestBought(id, compraId, decidedAt) {
+  db.prepare('UPDATE requests SET estado = ?, compraId = ?, decidedAt = ? WHERE id = ?')
+    .run('Comprada', compraId, decidedAt, id)
+  return getRequest(id)
+}
+
+export async function deleteRequest(id) {
+  const info = db.prepare('DELETE FROM requests WHERE id = ?').run(id)
   return info.changes > 0
 }
