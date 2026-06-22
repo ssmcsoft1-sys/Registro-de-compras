@@ -9,7 +9,19 @@ import { seedPurchases } from '../src/data/seed.js'
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }, // requerido por Neon/Supabase
+  max: 5,
+  idleTimeoutMillis: 30000, // cierra conexiones ociosas (evita sockets muertos si Neon se suspende)
+  connectionTimeoutMillis: 15000, // falla en 15s en vez de colgarse para siempre
+  keepAlive: true,
 })
+
+// Evita que un error de cliente ocioso tumbe el proceso.
+pool.on('error', (err) => console.error('Postgres pool error:', err.message))
+
+export async function ping() {
+  await pool.query('SELECT 1')
+  return true
+}
 
 const EDITABLE = ['fecha', 'proyecto', 'categoria', 'descripcion', 'proveedor', 'metodo', 'estado', 'importe', 'recibo', 'pagadoPor']
 const columnFor = (key) => (key === 'pagadoPor' ? 'pagado_por' : key)

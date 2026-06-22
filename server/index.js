@@ -6,6 +6,7 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import {
+  ping,
   getAllPurchases,
   insertPurchase,
   updatePurchase,
@@ -81,6 +82,18 @@ app.post('/api/logout', (req, res) => {
 app.get('/api/session', (req, res) => {
   const role = roleOf(req)
   res.json({ authed: !!role, role: role || null })
+})
+
+// Chequeo de salud (sin login): confirma que la base de datos responde.
+app.get('/api/health', async (req, res) => {
+  const started = Date.now()
+  try {
+    await ping()
+    res.json({ ok: true, ms: Date.now() - started })
+  } catch (e) {
+    console.error('Healthcheck DB error:', e.message)
+    res.status(500).json({ ok: false, error: e.message })
+  }
 })
 
 // ── Compras (solo responsable) ───────────────────────────────────

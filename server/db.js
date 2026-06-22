@@ -9,6 +9,7 @@ const adapter = process.env.DATABASE_URL
 
 console.log(`  Base de datos: ${process.env.DATABASE_URL ? 'Postgres (nube)' : 'SQLite (local)'}`)
 
+export const ping = adapter.ping
 export const getAllPurchases = adapter.getAllPurchases
 export const getPurchase = adapter.getPurchase
 export const insertPurchase = adapter.insertPurchase

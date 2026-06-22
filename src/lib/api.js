@@ -7,6 +7,14 @@ const BASE = '/api/purchases'
 // Error específico cuando el servidor responde 401 (sesión no iniciada o caducada).
 export class AuthError extends Error {}
 
+// fetch con límite de tiempo: evita que la app se quede cargando para siempre
+// si el servidor o la base de datos tardan demasiado (p. ej. al "despertar").
+function timedFetch(url, opts = {}, ms = 60000) {
+  const ctrl = new AbortController()
+  const id = setTimeout(() => ctrl.abort(), ms)
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id))
+}
+
 async function ensureOk(res, message) {
   if (res.status === 401) throw new AuthError('No autenticado')
   if (!res.ok) throw new Error(message)
@@ -16,7 +24,7 @@ async function ensureOk(res, message) {
 // ── Sesión ── (devuelven el rol: 'manager' | 'team' | null)
 export async function checkSession() {
   try {
-    const res = await fetch('/api/session')
+    const res = await timedFetch('/api/session')
     const data = await res.json()
     return data.authed ? data.role : null
   } catch {
@@ -25,7 +33,7 @@ export async function checkSession() {
 }
 
 export async function login(password) {
-  const res = await fetch('/api/login', {
+  const res = await timedFetch('/api/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password }),
@@ -36,20 +44,20 @@ export async function login(password) {
 }
 
 export async function logout() {
-  await fetch('/api/logout', { method: 'POST' })
+  await timedFetch('/api/logout', { method: 'POST' })
 }
 
 // ── Solicitudes ──
 const RBASE = '/api/requests'
 
 export async function fetchRequests() {
-  const res = await fetch(RBASE)
+  const res = await timedFetch(RBASE)
   await ensureOk(res, 'No se pudieron cargar las solicitudes')
   return res.json()
 }
 
 export async function createRequest(request) {
-  const res = await fetch(RBASE, {
+  const res = await timedFetch(RBASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
@@ -59,7 +67,7 @@ export async function createRequest(request) {
 }
 
 export async function rejectRequest(id, notaResponsable) {
-  const res = await fetch(`${RBASE}/${id}/reject`, {
+  const res = await timedFetch(`${RBASE}/${id}/reject`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ notaResponsable }),
@@ -69,7 +77,7 @@ export async function rejectRequest(id, notaResponsable) {
 }
 
 export async function buyRequest(id, purchase) {
-  const res = await fetch(`${RBASE}/${id}/buy`, {
+  const res = await timedFetch(`${RBASE}/${id}/buy`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(purchase),
@@ -79,19 +87,19 @@ export async function buyRequest(id, purchase) {
 }
 
 export async function deleteRequest(id) {
-  const res = await fetch(`${RBASE}/${id}`, { method: 'DELETE' })
+  const res = await timedFetch(`${RBASE}/${id}`, { method: 'DELETE' })
   await ensureOk(res, 'No se pudo eliminar la solicitud')
 }
 
 // ── Compras ──
 export async function fetchPurchases() {
-  const res = await fetch(BASE)
+  const res = await timedFetch(BASE)
   await ensureOk(res, 'No se pudieron cargar las compras')
   return res.json()
 }
 
 export async function createPurchase(purchase) {
-  const res = await fetch(BASE, {
+  const res = await timedFetch(BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(purchase),
@@ -101,7 +109,7 @@ export async function createPurchase(purchase) {
 }
 
 export async function updatePurchase(id, fields) {
-  const res = await fetch(`${BASE}/${id}`, {
+  const res = await timedFetch(`${BASE}/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(fields),
@@ -111,6 +119,6 @@ export async function updatePurchase(id, fields) {
 }
 
 export async function deletePurchase(id) {
-  const res = await fetch(`${BASE}/${id}`, { method: 'DELETE' })
+  const res = await timedFetch(`${BASE}/${id}`, { method: 'DELETE' })
   await ensureOk(res, 'No se pudo eliminar la compra')
 }

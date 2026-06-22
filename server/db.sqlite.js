@@ -70,6 +70,11 @@ if (n === 0) {
   }
 }
 
+export async function ping() {
+  db.prepare('SELECT 1').get()
+  return true
+}
+
 function rowToPurchase(row) {
   return {
     id: row.id,
