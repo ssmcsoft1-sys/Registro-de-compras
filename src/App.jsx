@@ -23,7 +23,7 @@ import {
   deleteRequest as apiDeleteRequest,
 } from './lib/api.js'
 
-const defaultView = (role) => (role === 'manager' ? 'resumen' : 'solicitudes')
+const defaultView = (role) => (role === 'manager' ? 'resumen' : 'historial')
 
 export default function App() {
   const { t } = useSettings()
@@ -43,11 +43,10 @@ export default function App() {
 
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
-  // Carga inicial: compras (solo responsable) + solicitudes (todos).
-  const load = useCallback((r) => {
+  // Carga inicial: compras (equipo y responsable) + solicitudes (todos).
+  const load = useCallback(() => {
     setStatus('loading')
-    const purchasesP = r === 'manager' ? fetchPurchases() : Promise.resolve([])
-    Promise.all([purchasesP, fetchRequests()])
+    Promise.all([fetchPurchases(), fetchRequests()])
       .then(([p, reqs]) => {
         setPurchases(p)
         setRequests(reqs)
@@ -64,7 +63,7 @@ export default function App() {
       setRole(r)
       if (r) {
         setView(defaultView(r))
-        load(r)
+        load()
       }
     })
   }, [load])
@@ -73,7 +72,7 @@ export default function App() {
     (r) => {
       setRole(r)
       setView(defaultView(r))
-      load(r)
+      load()
     },
     [load],
   )
@@ -212,7 +211,7 @@ export default function App() {
             {status === 'error' && (
               <div className="state-msg state-msg--error">
                 {t('app.connError')}
-                <button type="button" className="btn btn--secondary" onClick={() => load(role)}>
+                <button type="button" className="btn btn--secondary" onClick={() => load()}>
                   {t('app.retry')}
                 </button>
               </div>
@@ -220,10 +219,10 @@ export default function App() {
             {status === 'ready' && (
               <>
                 {view === 'resumen' && role === 'manager' && <Resumen purchases={purchases} />}
-                {view === 'registrar' && role === 'manager' && (
-                  <Registrar onSubmit={addPurchase} onCancel={() => setView('resumen')} />
+                {view === 'registrar' && (
+                  <Registrar onSubmit={addPurchase} onCancel={() => setView('historial')} />
                 )}
-                {view === 'historial' && role === 'manager' && (
+                {view === 'historial' && (
                   <Historial purchases={purchases} onDelete={deletePurchase} onEdit={editPurchase} />
                 )}
                 {view === 'solicitudes' && (

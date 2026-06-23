@@ -96,8 +96,8 @@ app.get('/api/health', async (req, res) => {
   }
 })
 
-// ── Compras (solo responsable) ───────────────────────────────────
-app.use('/api/purchases', requireManager)
+// ── Compras (equipo y responsable: registrar, ver, editar) ───────
+app.use('/api/purchases', requireAuth)
 
 app.get('/api/purchases', async (req, res) => {
   try {

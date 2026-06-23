@@ -10,7 +10,11 @@ const NAV_MANAGER = [
   { id: 'historial', key: 'nav.historial', Icon: List },
   { id: 'solicitudes', key: 'nav.solicitudes', Icon: Send },
 ]
-const NAV_TEAM = [{ id: 'solicitudes', key: 'nav.solicitudes', Icon: Send }]
+const NAV_TEAM = [
+  { id: 'registrar', key: 'nav.registrar', Icon: PlusCircle },
+  { id: 'historial', key: 'nav.historial', Icon: List },
+  { id: 'solicitudes', key: 'nav.solicitudes', Icon: Send },
+]
 
 export default function Sidebar({ role, view, onNavigate, onLogout }) {
   const { t } = useSettings()
