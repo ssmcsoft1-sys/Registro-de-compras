@@ -1212,6 +1212,18 @@ textarea {
   font: 500 13px var(--font-display);
   color: var(--yago-gray-500);
 }
+.sol-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  font: 700 13px var(--font-display);
+  color: var(--yago-indigo-700);
+  text-decoration: none;
+}
+.sol-link:hover {
+  text-decoration: underline;
+}
 .sol-note {
   font: 500 13px var(--font-display);
   color: var(--yago-gray-600);

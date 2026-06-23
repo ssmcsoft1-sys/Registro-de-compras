@@ -184,6 +184,7 @@ app.post('/api/requests', requireAuth, async (req, res) => {
     descripcion: String(b.descripcion).trim(),
     importeEstimado: est != null && est > 0 ? est : null,
     nota: b.nota ? String(b.nota).trim() : null,
+    link: b.link ? String(b.link).trim() : null,
   }
   try {
     res.status(201).json(await insertRequest(request))

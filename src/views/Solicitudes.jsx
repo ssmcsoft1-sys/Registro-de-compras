@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, Truck, X, Trash2, ShoppingCart, Send } from 'lucide-react'
+import { X, Trash2, ShoppingCart, Send, ExternalLink } from 'lucide-react'
 import { PROYECTOS_FORM, CATEGORIAS } from '../lib/constants.js'
 import { useSettings } from '../lib/settings.jsx'
 import Registrar from './Registrar.jsx'
@@ -10,7 +10,10 @@ function todayISO() {
   return new Date(now - tz).toISOString().slice(0, 10)
 }
 
-const emptyForm = () => ({ solicitante: '', proyecto: '', categoria: '', descripcion: '', importeEstimado: '', nota: '' })
+const emptyForm = () => ({ solicitante: '', proyecto: '', categoria: '', descripcion: '', importeEstimado: '', nota: '', link: '' })
+
+// Asegura que el enlace tenga protocolo para que abra correctamente.
+const hrefOf = (link) => (/^https?:\/\//i.test(link) ? link : `https://${link}`)
 
 function StatusBadge({ r }) {
   const { tReqStatus, tStatus } = useSettings()
@@ -49,6 +52,7 @@ export default function Solicitudes({ requests, role, onCreate, onReject, onBuy,
       descripcion: form.descripcion.trim(),
       importeEstimado: form.importeEstimado,
       nota: form.nota.trim(),
+      link: form.link.trim(),
     })
     if (ok) setForm(emptyForm())
   }
@@ -151,6 +155,17 @@ export default function Solicitudes({ requests, role, onCreate, onReject, onBuy,
             />
           </div>
 
+          <div className="field--full">
+            <label className="field__label">{t('sol.link')}</label>
+            <input
+              className="input"
+              type="url"
+              placeholder={t('sol.ph.link')}
+              value={form.link}
+              onChange={(e) => upd('link', e.target.value)}
+            />
+          </div>
+
           <div className="form-actions">
             <button type="submit" className="btn btn--save">
               <Send size={16} aria-hidden /> {t('sol.create')}
@@ -177,6 +192,11 @@ export default function Solicitudes({ requests, role, onCreate, onReject, onBuy,
                   {tProject(r.proyecto)} · {tCategory(r.categoria)}
                   {r.importeEstimado ? ` · ${t('sol.estimated', { amount: money(r.importeEstimado) })}` : ''}
                 </div>
+                {r.link && (
+                  <a className="sol-link" href={hrefOf(r.link)} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink size={13} aria-hidden /> {t('sol.viewLink')}
+                  </a>
+                )}
                 {r.nota && <div className="sol-note">“{r.nota}”</div>}
                 {r.estado === 'Rechazada' && r.notaResponsable && (
                   <div className="sol-note sol-note--manager">
