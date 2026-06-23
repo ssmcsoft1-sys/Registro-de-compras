@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Search, X, Check, Truck, Inbox, Trash2, Pencil, Receipt, Download } from 'lucide-react'
+import { Search, X, Check, Truck, Inbox, Trash2, Pencil, Receipt, Download, ZoomIn, ZoomOut } from 'lucide-react'
 import { filterRows, monthsFromPurchases, currentMonthKey } from '../lib/selectors.js'
 import { PROYECTOS_FORM, CATEGORIAS, PROJ_COLORS } from '../lib/constants.js'
 import { useSettings } from '../lib/settings.jsx'
@@ -33,6 +33,12 @@ export default function Historial({ purchases, onDelete, onEdit }) {
   const [filters, setFilters] = useState(initialFilters)
   const [editing, setEditing] = useState(null)
   const [receipt, setReceipt] = useState(null)
+  const [zoom, setZoom] = useState(1)
+
+  const openReceipt = (r) => {
+    setZoom(1)
+    setReceipt(r)
+  }
   const set = (key) => (e) => setFilters((f) => ({ ...f, [key]: e.target.value }))
 
   const { rows, total } = useMemo(() => filterRows(purchases, filters), [purchases, filters])
@@ -145,7 +151,7 @@ export default function Historial({ purchases, onDelete, onEdit }) {
                   <button
                     type="button"
                     className="row-action"
-                    onClick={() => setReceipt(r)}
+                    onClick={() => openReceipt(r)}
                     aria-label={t('hist.viewReceipt')}
                     title={t('hist.viewReceipt')}
                   >
@@ -216,6 +222,27 @@ export default function Historial({ purchases, onDelete, onEdit }) {
             <div className="modal__head">
               <h2 className="modal__title">{t('hist.receipt')} · {receipt.descripcion}</h2>
               <div className="modal__actions">
+                {isImage(receipt.recibo.url) && (
+                  <div className="zoom-controls">
+                    <button
+                      type="button"
+                      className="zoom-btn"
+                      onClick={() => setZoom((z) => Math.max(1, Math.round((z - 0.5) * 10) / 10))}
+                      aria-label="Zoom -"
+                    >
+                      <ZoomOut aria-hidden />
+                    </button>
+                    <span className="zoom-level">{Math.round(zoom * 100)}%</span>
+                    <button
+                      type="button"
+                      className="zoom-btn"
+                      onClick={() => setZoom((z) => Math.min(4, Math.round((z + 0.5) * 10) / 10))}
+                      aria-label="Zoom +"
+                    >
+                      <ZoomIn aria-hidden />
+                    </button>
+                  </div>
+                )}
                 <a
                   className="receipt-download"
                   href={receipt.recibo.url}
@@ -236,7 +263,16 @@ export default function Historial({ purchases, onDelete, onEdit }) {
             </div>
             <div className="receipt-view">
               {isImage(receipt.recibo.url) ? (
-                <img src={receipt.recibo.url} alt={receipt.recibo.name} />
+                <img
+                  src={receipt.recibo.url}
+                  alt={receipt.recibo.name}
+                  style={{
+                    maxWidth: `${zoom * 100}%`,
+                    maxHeight: `${zoom * 76}vh`,
+                    cursor: zoom > 1 ? 'zoom-out' : 'zoom-in',
+                  }}
+                  onClick={() => setZoom((z) => (z > 1 ? 1 : 2))}
+                />
               ) : (
                 <iframe
                   className="receipt-view__pdf"

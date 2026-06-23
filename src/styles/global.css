@@ -1116,19 +1116,54 @@ textarea {
   border-radius: var(--radius-card);
   padding: 16px;
   box-shadow: var(--shadow-sm);
-  display: flex;
-  justify-content: center;
+  overflow: auto;
+  max-height: 82vh;
+  text-align: center;
 }
 .receipt-view img {
-  max-width: 100%;
-  max-height: 72vh;
+  display: inline-block;
   border-radius: 8px;
 }
 .receipt-view__pdf {
   width: 100%;
-  height: 72vh;
+  height: 76vh;
   border: 0;
   border-radius: 8px;
+}
+
+/* Controles de zoom del comprobante (en la cabecera oscura del modal) */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-pill);
+  padding: 3px 6px;
+}
+.zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+.zoom-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.zoom-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+.zoom-level {
+  color: #fff;
+  font: 700 12px var(--font-display);
+  min-width: 42px;
+  text-align: center;
 }
 
 /* ============================================================
