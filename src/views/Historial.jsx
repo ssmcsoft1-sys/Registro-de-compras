@@ -51,7 +51,12 @@ export default function Historial({ purchases, onDelete, onEdit }) {
     return [{ value: 'all', label: t('hist.allMonths') }, ...opts]
   }, [purchases, monthsLong, t])
 
-  const subLabel = (r) => (r.pagadoPor ? `${r.proveedor} · ${t('hist.paidBy')}: ${r.pagadoPor}` : r.proveedor)
+  const subLabel = (r) => {
+    let s = r.proveedor
+    if (r.pagadoPor) s += ` · ${t('hist.paidBy')}: ${r.pagadoPor}`
+    if (r.creadoPor) s += ` · ${t('hist.createdBy')}: ${r.creadoPor.split('@')[0]}`
+    return s
+  }
 
   const handleDelete = (row) => {
     const ok = window.confirm(

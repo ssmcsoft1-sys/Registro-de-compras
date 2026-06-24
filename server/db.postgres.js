@@ -39,6 +39,7 @@ function rowToPurchase(row) {
     importe: row.importe,
     recibo: row.recibo ? JSON.parse(row.recibo) : null,
     pagadoPor: row.pagado_por ?? null,
+    creadoPor: row.creado_por ?? null,
   }
 }
 
@@ -56,10 +57,23 @@ await pool.query(`
     importe     double precision NOT NULL,
     recibo      text,
     pagado_por  text,
+    creado_por  text,
     created_at  text NOT NULL
   );
 `)
 await pool.query('ALTER TABLE purchases ADD COLUMN IF NOT EXISTS pagado_por text')
+await pool.query('ALTER TABLE purchases ADD COLUMN IF NOT EXISTS creado_por text')
+
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS users (
+    id            text PRIMARY KEY,
+    email         text NOT NULL UNIQUE,
+    nombre        text NOT NULL,
+    password_hash text NOT NULL,
+    role          text NOT NULL,
+    created_at    text NOT NULL
+  );
+`)
 
 await pool.query(`
   CREATE TABLE IF NOT EXISTS requests (
@@ -117,8 +131,8 @@ export async function updatePurchase(id, fields) {
 export async function insertPurchase(p) {
   await pool.query(
     `INSERT INTO purchases
-      (id, fecha, proyecto, categoria, descripcion, proveedor, metodo, estado, importe, recibo, pagado_por, created_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      (id, fecha, proyecto, categoria, descripcion, proveedor, metodo, estado, importe, recibo, pagado_por, creado_por, created_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
     [
       p.id,
       p.fecha,
@@ -131,6 +145,7 @@ export async function insertPurchase(p) {
       p.importe,
       p.recibo ? JSON.stringify(p.recibo) : null,
       p.pagadoPor ?? null,
+      p.creadoPor ?? null,
       p.created_at,
     ],
   )
@@ -209,5 +224,47 @@ export async function markRequestBought(id, compraId, decidedAt) {
 
 export async function deleteRequest(id) {
   const { rowCount } = await pool.query('DELETE FROM requests WHERE id = $1', [id])
+  return rowCount > 0
+}
+
+// ── Usuarios ──
+const publicUser = (u) => (u ? { id: u.id, email: u.email, nombre: u.nombre, role: u.role, created_at: u.created_at } : null)
+
+export async function getUserByEmail(email) {
+  const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [String(email).toLowerCase()])
+  return rows[0] ?? null
+}
+export async function getUserById(id) {
+  const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [id])
+  return rows[0] ?? null
+}
+export async function getAllUsers() {
+  const { rows } = await pool.query('SELECT * FROM users ORDER BY created_at ASC')
+  return rows.map(publicUser)
+}
+export async function countUsers() {
+  const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM users')
+  return rows[0].n
+}
+export async function countAdmins() {
+  const { rows } = await pool.query("SELECT COUNT(*)::int AS n FROM users WHERE role = 'manager'")
+  return rows[0].n
+}
+export async function insertUser(u) {
+  await pool.query('INSERT INTO users (id, email, nombre, password_hash, role, created_at) VALUES ($1,$2,$3,$4,$5,$6)', [
+    u.id, u.email, u.nombre, u.password_hash, u.role, u.created_at,
+  ])
+  return publicUser(await getUserById(u.id))
+}
+export async function updateUserPassword(id, password_hash) {
+  await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [password_hash, id])
+  return publicUser(await getUserById(id))
+}
+export async function updateUserRole(id, role) {
+  await pool.query('UPDATE users SET role = $1 WHERE id = $2', [role, id])
+  return publicUser(await getUserById(id))
+}
+export async function deleteUser(id) {
+  const { rowCount } = await pool.query('DELETE FROM users WHERE id = $1', [id])
   return rowCount > 0
 }

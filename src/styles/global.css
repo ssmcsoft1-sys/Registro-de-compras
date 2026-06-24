@@ -158,6 +158,14 @@ textarea {
 .nav__item span {
   flex: 1;
 }
+.sidebar__user {
+  font: 600 12px var(--font-display);
+  color: var(--yago-gray-400);
+  padding: 0 14px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .nav__item--logout {
   color: var(--yago-gray-500);
 }
@@ -214,6 +222,9 @@ textarea {
 .login__field {
   position: relative;
   width: 100%;
+}
+.login__field + .login__field {
+  margin-top: 10px;
 }
 .login__icon {
   position: absolute;
@@ -1211,10 +1222,15 @@ textarea {
   font-size: 13px;
 }
 
-.solicitudes {
+.solicitudes,
+.usuarios {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+.user-you {
+  font: 600 12px var(--font-display);
+  color: var(--yago-indigo-500);
 }
 .sol-form__title {
   margin: 0 0 18px;

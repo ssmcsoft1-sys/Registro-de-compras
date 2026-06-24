@@ -22,3 +22,13 @@ export const insertRequest = adapter.insertRequest
 export const rejectRequest = adapter.rejectRequest
 export const markRequestBought = adapter.markRequestBought
 export const deleteRequest = adapter.deleteRequest
+
+export const getUserByEmail = adapter.getUserByEmail
+export const getUserById = adapter.getUserById
+export const getAllUsers = adapter.getAllUsers
+export const countUsers = adapter.countUsers
+export const countAdmins = adapter.countAdmins
+export const insertUser = adapter.insertUser
+export const updateUserPassword = adapter.updateUserPassword
+export const updateUserRole = adapter.updateUserRole
+export const deleteUser = adapter.deleteUser

@@ -10,7 +10,7 @@ function todayISO() {
   return new Date(now - tz).toISOString().slice(0, 10)
 }
 
-const emptyForm = () => ({ solicitante: '', proyecto: '', categoria: '', descripcion: '', importeEstimado: '', nota: '', link: '' })
+const emptyForm = () => ({ proyecto: '', categoria: '', descripcion: '', importeEstimado: '', nota: '', link: '' })
 
 // Asegura que el enlace tenga protocolo para que abra correctamente.
 const hrefOf = (link) => (/^https?:\/\//i.test(link) ? link : `https://${link}`)
@@ -39,14 +39,12 @@ export default function Solicitudes({ requests, role, onCreate, onReject, onBuy,
   const submit = async (e) => {
     e.preventDefault()
     const errs = {
-      solicitante: !form.solicitante.trim(),
       proyecto: !form.proyecto,
       categoria: !form.categoria,
       descripcion: !form.descripcion.trim(),
     }
     if (Object.values(errs).some(Boolean)) return setErrors(errs)
     const ok = await onCreate({
-      solicitante: form.solicitante.trim(),
       proyecto: form.proyecto,
       categoria: form.categoria,
       descripcion: form.descripcion.trim(),
@@ -88,15 +86,6 @@ export default function Solicitudes({ requests, role, onCreate, onReject, onBuy,
         <form className="form-card sol-form" onSubmit={submit}>
           <h3 className="card__title sol-form__title">{t('sol.new')}</h3>
           <div className="form-grid">
-            <div>
-              <label className="field__label">{t('sol.solicitante')} <span className="field__required">*</span></label>
-              <input
-                className="input"
-                placeholder={t('sol.ph.solicitante')}
-                value={form.solicitante}
-                onChange={(e) => upd('solicitante', e.target.value)}
-              />
-            </div>
             <div>
               <label className="field__label">{t('sol.importeEstimado')}</label>
               <div className="amount-wrap">

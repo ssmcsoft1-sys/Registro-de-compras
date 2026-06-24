@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Lock } from 'lucide-react'
+import { Lock, Mail } from 'lucide-react'
 import { login } from '../lib/api.js'
 import logo from '../assets/yago-logo-horizontal.png'
 import { useSettings } from '../lib/settings.jsx'
@@ -7,6 +7,7 @@ import { LanguageSwitch } from '../components/Switchers.jsx'
 
 export default function Login({ onSuccess }) {
   const { t } = useSettings()
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -15,9 +16,9 @@ export default function Login({ onSuccess }) {
     e.preventDefault()
     setLoading(true)
     setError(false)
-    const role = await login(password)
+    const user = await login(email.trim(), password)
     setLoading(false)
-    if (role) onSuccess(role)
+    if (user) onSuccess(user)
     else setError(true)
   }
 
@@ -29,6 +30,17 @@ export default function Login({ onSuccess }) {
         <p className="login__subtitle">{t('login.subtitle')}</p>
 
         <div className="login__field">
+          <Mail className="login__icon" aria-hidden />
+          <input
+            className="login__input"
+            type="email"
+            placeholder={t('login.email')}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <div className="login__field">
           <Lock className="login__icon" aria-hidden />
           <input
             className="login__input"
@@ -36,7 +48,6 @@ export default function Login({ onSuccess }) {
             placeholder={t('login.password')}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            autoFocus
           />
         </div>
         {error && <div className="login__error">{t('login.error')}</div>}

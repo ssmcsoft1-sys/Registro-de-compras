@@ -1,5 +1,5 @@
-// Servidor de la app: API REST de compras + solicitudes + login con roles
-// (responsable / equipo) + sirve el frontend compilado.
+// Servidor: API REST de compras + solicitudes + usuarios (cuentas individuales) +
+// login por correo + sirve el frontend compilado.
 
 import express from 'express'
 import { existsSync } from 'node:fs'
@@ -17,21 +17,58 @@ import {
   rejectRequest,
   markRequestBought,
   deleteRequest,
+  getUserByEmail,
+  getUserById,
+  getAllUsers,
+  countUsers,
+  countAdmins,
+  insertUser,
+  updateUserPassword,
+  updateUserRole,
+  deleteUser,
 } from './db.js'
 import {
   configProblem,
-  roleForPassword,
+  emailAllowed,
+  hashPassword,
+  verifyPassword,
   setAuthCookie,
   clearAuthCookie,
-  roleOf,
+  userFromReq,
   requireAuth,
   requireManager,
+  ALLOWED_DOMAIN,
 } from './auth.js'
 
 const problem = configProblem()
 if (problem) {
-  console.error(`\n  ERROR DE CONFIGURACIÓN: ${problem}\n  Define esas variables de entorno y reinicia.\n`)
+  console.error(`\n  ERROR DE CONFIGURACIÓN: ${problem}\n  Define esa variable de entorno y reinicia.\n`)
   process.exit(1)
+}
+
+// Admin inicial (bootstrap): si no hay usuarios, lo crea desde ADMIN_EMAIL/ADMIN_PASSWORD.
+async function bootstrapAdmin() {
+  try {
+    if ((await countUsers()) > 0) return
+    const email = (process.env.ADMIN_EMAIL || '').toLowerCase().trim()
+    const password = process.env.ADMIN_PASSWORD
+    if (!email || !password) {
+      console.error('\n  ⚠ No hay usuarios y faltan ADMIN_EMAIL / ADMIN_PASSWORD.')
+      console.error('  Define esas variables para crear el administrador inicial y reinicia.\n')
+      return
+    }
+    await insertUser({
+      id: randomUUID(),
+      email,
+      nombre: email.split('@')[0],
+      password_hash: hashPassword(password),
+      role: 'manager',
+      created_at: new Date().toISOString(),
+    })
+    console.log(`  Administrador inicial creado: ${email}`)
+  } catch (e) {
+    console.error('Bootstrap admin error:', e.message)
+  }
 }
 
 const app = express()
@@ -41,7 +78,6 @@ app.use(express.json({ limit: '25mb' }))
 const REQUIRED = ['fecha', 'proyecto', 'categoria', 'descripcion', 'proveedor', 'metodo', 'estado']
 const ESTADOS = ['Recibido', 'En envío']
 
-// Construye y valida una compra a partir del cuerpo de la petición.
 function buildPurchase(b) {
   const importe = Number(b.importe)
   const missing = REQUIRED.filter((k) => !b[k] || !String(b[k]).trim())
@@ -67,11 +103,20 @@ function buildPurchase(b) {
 }
 
 // ── Autenticación ────────────────────────────────────────────────
-app.post('/api/login', (req, res) => {
-  const role = roleForPassword(req.body?.password)
-  if (!role) return res.status(401).json({ error: 'Contraseña incorrecta' })
-  setAuthCookie(res, role)
-  res.json({ ok: true, role })
+app.post('/api/login', async (req, res) => {
+  const email = String(req.body?.email || '').toLowerCase().trim()
+  const password = req.body?.password
+  try {
+    const user = await getUserByEmail(email)
+    if (!user || !verifyPassword(password, user.password_hash)) {
+      return res.status(401).json({ error: 'Correo o contraseña incorrectos' })
+    }
+    setAuthCookie(res, user.id)
+    res.json({ role: user.role, email: user.email, nombre: user.nombre })
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: 'Error al iniciar sesión' })
+  }
 })
 
 app.post('/api/logout', (req, res) => {
@@ -79,12 +124,11 @@ app.post('/api/logout', (req, res) => {
   res.status(204).end()
 })
 
-app.get('/api/session', (req, res) => {
-  const role = roleOf(req)
-  res.json({ authed: !!role, role: role || null })
+app.get('/api/session', async (req, res) => {
+  const u = await userFromReq(req)
+  res.json({ authed: !!u, role: u?.role || null, email: u?.email || null, nombre: u?.nombre || null })
 })
 
-// Chequeo de salud (sin login): confirma que la base de datos responde.
 app.get('/api/health', async (req, res) => {
   const started = Date.now()
   try {
@@ -96,7 +140,89 @@ app.get('/api/health', async (req, res) => {
   }
 })
 
-// ── Compras (equipo y responsable: registrar, ver, editar) ───────
+// ── Usuarios (solo responsable/admin) ────────────────────────────
+app.get('/api/users', requireManager, async (req, res) => {
+  try {
+    res.json(await getAllUsers())
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: 'Error al leer los usuarios' })
+  }
+})
+
+app.post('/api/users', requireManager, async (req, res) => {
+  const b = req.body ?? {}
+  const email = String(b.email || '').toLowerCase().trim()
+  const nombre = String(b.nombre || '').trim() || email.split('@')[0]
+  const role = b.role === 'manager' ? 'manager' : 'team'
+  if (!emailAllowed(email)) return res.status(400).json({ error: `El correo debe ser @${ALLOWED_DOMAIN}` })
+  if (!b.password || String(b.password).length < 6) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' })
+  }
+  try {
+    if (await getUserByEmail(email)) return res.status(409).json({ error: 'Ya existe un usuario con ese correo' })
+    const user = await insertUser({
+      id: randomUUID(),
+      email,
+      nombre,
+      password_hash: hashPassword(b.password),
+      role,
+      created_at: new Date().toISOString(),
+    })
+    res.status(201).json(user)
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: 'Error al crear el usuario' })
+  }
+})
+
+app.patch('/api/users/:id', requireManager, async (req, res) => {
+  const b = req.body ?? {}
+  try {
+    const target = await getUserById(req.params.id)
+    if (!target) return res.status(404).json({ error: 'No encontrado' })
+
+    if ('password' in b) {
+      if (!b.password || String(b.password).length < 6) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' })
+      }
+      await updateUserPassword(target.id, hashPassword(b.password))
+    }
+    if ('role' in b) {
+      const role = b.role === 'manager' ? 'manager' : 'team'
+      if (target.id === req.user.id && role !== 'manager') {
+        return res.status(400).json({ error: 'No puedes quitarte el rol de administrador a ti mismo' })
+      }
+      if (role !== 'manager' && target.role === 'manager' && (await countAdmins()) <= 1) {
+        return res.status(400).json({ error: 'Debe quedar al menos un administrador' })
+      }
+      await updateUserRole(target.id, role)
+    }
+    const u = await getUserById(target.id)
+    res.json({ id: u.id, email: u.email, nombre: u.nombre, role: u.role, created_at: u.created_at })
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: 'Error al actualizar el usuario' })
+  }
+})
+
+app.delete('/api/users/:id', requireManager, async (req, res) => {
+  try {
+    if (req.params.id === req.user.id) return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta' })
+    const target = await getUserById(req.params.id)
+    if (!target) return res.status(404).json({ error: 'No encontrado' })
+    if (target.role === 'manager' && (await countAdmins()) <= 1) {
+      return res.status(400).json({ error: 'Debe quedar al menos un administrador' })
+    }
+    await deleteUser(req.params.id)
+    res.status(204).end()
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: 'Error al eliminar el usuario' })
+  }
+})
+
+// ── Compras (equipo y responsable) ───────────────────────────────
 app.use('/api/purchases', requireAuth)
 
 app.get('/api/purchases', async (req, res) => {
@@ -111,6 +237,7 @@ app.get('/api/purchases', async (req, res) => {
 app.post('/api/purchases', async (req, res) => {
   const { purchase, error } = buildPurchase(req.body ?? {})
   if (error) return res.status(error.status).json(error.body)
+  purchase.creadoPor = req.user.email
   try {
     const saved = await insertPurchase(purchase)
     res.status(201).json(saved ?? purchase)
@@ -158,7 +285,6 @@ app.delete('/api/purchases/:id', async (req, res) => {
 })
 
 // ── Solicitudes ──────────────────────────────────────────────────
-// Cualquier rol puede ver y crear; solo el responsable decide.
 app.get('/api/requests', requireAuth, async (req, res) => {
   try {
     res.json(await getAllRequests())
@@ -170,7 +296,7 @@ app.get('/api/requests', requireAuth, async (req, res) => {
 
 app.post('/api/requests', requireAuth, async (req, res) => {
   const b = req.body ?? {}
-  const required = ['solicitante', 'proyecto', 'categoria', 'descripcion']
+  const required = ['proyecto', 'categoria', 'descripcion']
   const missing = required.filter((k) => !b[k] || !String(b[k]).trim())
   if (missing.length) return res.status(400).json({ error: 'Datos incompletos', missing })
 
@@ -178,7 +304,7 @@ app.post('/api/requests', requireAuth, async (req, res) => {
   const request = {
     id: randomUUID(),
     created_at: new Date().toISOString(),
-    solicitante: String(b.solicitante).trim(),
+    solicitante: req.user.email, // autor automático
     proyecto: b.proyecto,
     categoria: b.categoria,
     descripcion: String(b.descripcion).trim(),
@@ -207,7 +333,6 @@ app.post('/api/requests/:id/reject', requireManager, async (req, res) => {
   }
 })
 
-// Comprar una solicitud: crea la compra y marca la solicitud como Comprada.
 app.post('/api/requests/:id/buy', requireManager, async (req, res) => {
   try {
     const r = await getRequest(req.params.id)
@@ -216,6 +341,7 @@ app.post('/api/requests/:id/buy', requireManager, async (req, res) => {
 
     const { purchase, error } = buildPurchase(req.body ?? {})
     if (error) return res.status(error.status).json(error.body)
+    purchase.creadoPor = req.user.email
 
     const saved = await insertPurchase(purchase)
     const request = await markRequestBought(req.params.id, purchase.id, new Date().toISOString())
@@ -247,6 +373,7 @@ if (existsSync(distDir)) {
 }
 
 const PORT = process.env.PORT || 3001
+await bootstrapAdmin()
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n  Registro de compras — servidor activo`)
   console.log(`  Local:   http://localhost:${PORT}`)

@@ -6,6 +6,7 @@ import Resumen from './views/Resumen.jsx'
 import Registrar from './views/Registrar.jsx'
 import Historial from './views/Historial.jsx'
 import Solicitudes from './views/Solicitudes.jsx'
+import Usuarios from './views/Usuarios.jsx'
 import Login from './views/Login.jsx'
 import { useSettings } from './lib/settings.jsx'
 import {
@@ -27,7 +28,7 @@ const defaultView = (role) => (role === 'manager' ? 'resumen' : 'historial')
 
 export default function App() {
   const { t } = useSettings()
-  const [role, setRole] = useState(undefined) // undefined = comprobando, null = sin sesión
+  const [user, setUser] = useState(undefined) // undefined = comprobando, null = sin sesión, objeto = sesión
   const [view, setView] = useState('resumen')
   const [purchases, setPurchases] = useState([])
   const [requests, setRequests] = useState([])
@@ -53,25 +54,25 @@ export default function App() {
         setStatus('ready')
       })
       .catch((e) => {
-        if (e instanceof AuthError) setRole(null)
+        if (e instanceof AuthError) setUser(null)
         else setStatus('error')
       })
   }, [])
 
   useEffect(() => {
-    checkSession().then((r) => {
-      setRole(r)
-      if (r) {
-        setView(defaultView(r))
+    checkSession().then((u) => {
+      setUser(u)
+      if (u) {
+        setView(defaultView(u.role))
         load()
       }
     })
   }, [load])
 
   const handleLoginSuccess = useCallback(
-    (r) => {
-      setRole(r)
-      setView(defaultView(r))
+    (u) => {
+      setUser(u)
+      setView(defaultView(u.role))
       load()
     },
     [load],
@@ -79,14 +80,14 @@ export default function App() {
 
   const handleLogout = useCallback(async () => {
     await apiLogout()
-    setRole(null)
+    setUser(null)
     setPurchases([])
     setRequests([])
   }, [])
 
   const onAuthError = useCallback((e) => {
     if (e instanceof AuthError) {
-      setRole(null)
+      setUser(null)
       return true
     }
     return false
@@ -193,16 +194,18 @@ export default function App() {
     [showToast, onAuthError, t],
   )
 
-  if (role === undefined) {
+  if (user === undefined) {
     return <div className="boot">{t('app.booting')}</div>
   }
-  if (!role) {
+  if (!user) {
     return <Login onSuccess={handleLoginSuccess} />
   }
 
+  const role = user.role
+
   return (
     <div className="app">
-      <Sidebar role={role} view={view} onNavigate={setView} onLogout={handleLogout} />
+      <Sidebar role={role} user={user} view={view} onNavigate={setView} onLogout={handleLogout} />
       <main className="main">
         <Header view={view} onRegister={() => setView('registrar')} />
         <div className="scroll-area">
@@ -234,6 +237,9 @@ export default function App() {
                     onBuy={buyRequest}
                     onDelete={deleteRequest}
                   />
+                )}
+                {view === 'usuarios' && role === 'manager' && (
+                  <Usuarios currentEmail={user.email} onAuthError={onAuthError} />
                 )}
               </>
             )}

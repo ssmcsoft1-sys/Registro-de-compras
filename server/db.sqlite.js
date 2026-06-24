@@ -28,15 +28,31 @@ db.exec(`
     importe     REAL NOT NULL,
     recibo      TEXT,
     pagadoPor   TEXT,
+    creado_por  TEXT,
     created_at  TEXT NOT NULL
   );
 `)
 
-// Migración: añade la columna pagadoPor a bases de datos ya existentes.
+// Migración: añade columnas a bases de datos ya existentes.
 const cols = db.prepare('PRAGMA table_info(purchases)').all().map((c) => c.name)
 if (!cols.includes('pagadoPor')) {
   db.exec('ALTER TABLE purchases ADD COLUMN pagadoPor TEXT')
 }
+if (!cols.includes('creado_por')) {
+  db.exec('ALTER TABLE purchases ADD COLUMN creado_por TEXT')
+}
+
+// Usuarios (cuentas individuales con correo corporativo).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id            TEXT PRIMARY KEY,
+    email         TEXT NOT NULL UNIQUE,
+    nombre        TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    role          TEXT NOT NULL,
+    created_at    TEXT NOT NULL
+  );
+`)
 
 // Solicitudes de compra (flujo: Pendiente -> Comprada | Rechazada).
 db.exec(`
@@ -95,6 +111,7 @@ function rowToPurchase(row) {
     importe: row.importe,
     recibo: row.recibo ? JSON.parse(row.recibo) : null,
     pagadoPor: row.pagadoPor ?? null,
+    creadoPor: row.creado_por ?? null,
   }
 }
 
@@ -125,9 +142,9 @@ export async function updatePurchase(id, fields) {
 export async function insertPurchase(p) {
   db.prepare(`
     INSERT INTO purchases
-      (id, fecha, proyecto, categoria, descripcion, proveedor, metodo, estado, importe, recibo, pagadoPor, created_at)
+      (id, fecha, proyecto, categoria, descripcion, proveedor, metodo, estado, importe, recibo, pagadoPor, creado_por, created_at)
     VALUES
-      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     p.id,
     p.fecha,
@@ -140,6 +157,7 @@ export async function insertPurchase(p) {
     p.importe,
     p.recibo ? JSON.stringify(p.recibo) : null,
     p.pagadoPor ?? null,
+    p.creadoPor ?? null,
     p.created_at,
   )
   return getPurchase(p.id)
@@ -211,5 +229,46 @@ export async function markRequestBought(id, compraId, decidedAt) {
 
 export async function deleteRequest(id) {
   const info = db.prepare('DELETE FROM requests WHERE id = ?').run(id)
+  return info.changes > 0
+}
+
+// ── Usuarios ──
+function rowToUser(row) {
+  if (!row) return null
+  return { id: row.id, email: row.email, nombre: row.nombre, role: row.role, created_at: row.created_at, password_hash: row.password_hash }
+}
+// Versión pública (sin el hash de la contraseña).
+const publicUser = (u) => (u ? { id: u.id, email: u.email, nombre: u.nombre, role: u.role, created_at: u.created_at } : null)
+
+export async function getUserByEmail(email) {
+  return rowToUser(db.prepare('SELECT * FROM users WHERE email = ?').get(String(email).toLowerCase()))
+}
+export async function getUserById(id) {
+  return rowToUser(db.prepare('SELECT * FROM users WHERE id = ?').get(id))
+}
+export async function getAllUsers() {
+  return db.prepare('SELECT * FROM users ORDER BY created_at ASC').all().map((r) => publicUser(rowToUser(r)))
+}
+export async function countUsers() {
+  return db.prepare('SELECT COUNT(*) AS n FROM users').get().n
+}
+export async function countAdmins() {
+  return db.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'manager'").get().n
+}
+export async function insertUser(u) {
+  db.prepare('INSERT INTO users (id, email, nombre, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(u.id, u.email, u.nombre, u.password_hash, u.role, u.created_at)
+  return publicUser(await getUserById(u.id))
+}
+export async function updateUserPassword(id, password_hash) {
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(password_hash, id)
+  return publicUser(await getUserById(id))
+}
+export async function updateUserRole(id, role) {
+  db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id)
+  return publicUser(await getUserById(id))
+}
+export async function deleteUser(id) {
+  const info = db.prepare('DELETE FROM users WHERE id = ?').run(id)
   return info.changes > 0
 }

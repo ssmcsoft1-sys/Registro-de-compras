@@ -1,65 +1,68 @@
-// Autenticación por contraseña compartida con DOS roles:
-//   - 'manager' (responsable): contraseña MANAGER_PASSWORD (o APP_PASSWORD por compatibilidad)
-//   - 'team' (equipo): contraseña TEAM_PASSWORD
-// La cookie firmada (HMAC, sin estado) lleva el rol y sobrevive a reinicios.
+// Autenticación con cuentas individuales (correo + contraseña).
+// Contraseñas con hash scrypt (node:crypto, sin dependencias). Cookie firmada HMAC
+// sin estado que lleva el id de usuario; el rol se lee de la cuenta en cada petición
+// (así, borrar/cambiar un usuario tiene efecto inmediato).
 
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHmac, timingSafeEqual, scryptSync, randomBytes } from 'node:crypto'
 import { parse, serialize } from 'cookie'
+import { getUserById } from './db.js'
 
 const IS_PROD = process.env.NODE_ENV === 'production'
 const COOKIE_NAME = 'rc_auth'
 const MAX_AGE_S = 30 * 24 * 60 * 60 // 30 días
-
-const MANAGER_PASSWORD =
-  process.env.MANAGER_PASSWORD || process.env.APP_PASSWORD || (IS_PROD ? null : 'jefe')
-const TEAM_PASSWORD = process.env.TEAM_PASSWORD || (IS_PROD ? null : 'equipo')
 const SESSION_SECRET = process.env.SESSION_SECRET || (IS_PROD ? null : 'dev-secret-cambiar')
 
+export const ALLOWED_DOMAIN = (process.env.ALLOWED_DOMAIN || 'candelasoft.com').toLowerCase()
+
 export function configProblem() {
-  if (IS_PROD && (!MANAGER_PASSWORD || !SESSION_SECRET)) {
-    return 'Faltan variables de entorno MANAGER_PASSWORD (o APP_PASSWORD) y/o SESSION_SECRET en producción.'
-  }
+  if (IS_PROD && !SESSION_SECRET) return 'Falta la variable de entorno SESSION_SECRET en producción.'
   return null
 }
 
-function safeEqual(a, b) {
-  const ba = Buffer.from(String(a))
-  const bb = Buffer.from(String(b))
-  return ba.length === bb.length && timingSafeEqual(ba, bb)
+export function emailAllowed(email) {
+  return typeof email === 'string' && email.toLowerCase().trim().endsWith(`@${ALLOWED_DOMAIN}`)
 }
 
-// Devuelve el rol que corresponde a la contraseña, o null. El responsable tiene prioridad.
-export function roleForPassword(input) {
-  if (MANAGER_PASSWORD != null && safeEqual(input ?? '', MANAGER_PASSWORD)) return 'manager'
-  if (TEAM_PASSWORD != null && safeEqual(input ?? '', TEAM_PASSWORD)) return 'team'
-  return null
+function safeEqualHex(aHex, bBuf) {
+  const a = Buffer.from(aHex, 'hex')
+  return a.length === bBuf.length && timingSafeEqual(a, bBuf)
 }
 
+// ── Hash de contraseñas (scrypt) ──
+export function hashPassword(password) {
+  const salt = randomBytes(16).toString('hex')
+  const hash = scryptSync(String(password), salt, 64).toString('hex')
+  return `${salt}:${hash}`
+}
+export function verifyPassword(password, stored) {
+  if (!stored || !stored.includes(':')) return false
+  const [salt, hash] = stored.split(':')
+  return safeEqualHex(hash, scryptSync(String(password), salt, 64))
+}
+
+// ── Cookie de sesión firmada (lleva el userId) ──
 function sign(value) {
   return createHmac('sha256', SESSION_SECRET ?? '').update(value).digest('hex')
 }
-
-function makeToken(role) {
+function makeToken(userId) {
   const exp = String(Date.now() + MAX_AGE_S * 1000)
-  const payload = `${exp}.${role}`
+  const payload = `${exp}.${userId}`
   return `${payload}.${sign(payload)}`
 }
-
-// Devuelve el rol válido del token, o null.
-function roleFromToken(token) {
+function userIdFromToken(token) {
   if (!token) return null
   const parts = token.split('.')
   if (parts.length !== 3) return null
-  const [exp, role, sig] = parts
-  if (!safeEqual(sig, sign(`${exp}.${role}`))) return null
+  const [exp, userId, sig] = parts
+  if (sig !== sign(`${exp}.${userId}`)) return null
   if (!(Number(exp) > Date.now())) return null
-  return role === 'manager' || role === 'team' ? role : null
+  return userId
 }
 
-export function setAuthCookie(res, role) {
+export function setAuthCookie(res, userId) {
   res.setHeader(
     'Set-Cookie',
-    serialize(COOKIE_NAME, makeToken(role), {
+    serialize(COOKIE_NAME, makeToken(userId), {
       httpOnly: true,
       sameSite: 'lax',
       secure: IS_PROD,
@@ -68,7 +71,6 @@ export function setAuthCookie(res, role) {
     }),
   )
 }
-
 export function clearAuthCookie(res) {
   res.setHeader(
     'Set-Cookie',
@@ -76,24 +78,36 @@ export function clearAuthCookie(res) {
   )
 }
 
-export function roleOf(req) {
+// Usuario de la petición (o null). Lee la cuenta de la BD según el id de la cookie.
+export async function userFromReq(req) {
   const cookies = parse(req.headers.cookie || '')
-  return roleFromToken(cookies[COOKIE_NAME])
+  const id = userIdFromToken(cookies[COOKIE_NAME])
+  if (!id) return null
+  const u = await getUserById(id)
+  return u ? { id: u.id, email: u.email, nombre: u.nombre, role: u.role } : null
 }
 
-// Middleware: cualquier rol válido. Adjunta req.role.
-export function requireAuth(req, res, next) {
-  const role = roleOf(req)
-  if (!role) return res.status(401).json({ error: 'No autenticado' })
-  req.role = role
-  next()
+export async function requireAuth(req, res, next) {
+  try {
+    const u = await userFromReq(req)
+    if (!u) return res.status(401).json({ error: 'No autenticado' })
+    req.user = u
+    next()
+  } catch (e) {
+    console.error('Auth error:', e.message)
+    res.status(500).json({ error: 'Error de autenticación' })
+  }
 }
 
-// Middleware: solo el responsable.
-export function requireManager(req, res, next) {
-  const role = roleOf(req)
-  if (!role) return res.status(401).json({ error: 'No autenticado' })
-  if (role !== 'manager') return res.status(403).json({ error: 'Solo el responsable' })
-  req.role = role
-  next()
+export async function requireManager(req, res, next) {
+  try {
+    const u = await userFromReq(req)
+    if (!u) return res.status(401).json({ error: 'No autenticado' })
+    if (u.role !== 'manager') return res.status(403).json({ error: 'Solo el responsable' })
+    req.user = u
+    next()
+  } catch (e) {
+    console.error('Auth error:', e.message)
+    res.status(500).json({ error: 'Error de autenticación' })
+  }
 }
