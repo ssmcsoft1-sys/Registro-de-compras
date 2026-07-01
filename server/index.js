@@ -78,6 +78,34 @@ app.use(express.json({ limit: '25mb' }))
 const REQUIRED = ['fecha', 'proyecto', 'categoria', 'descripcion', 'proveedor', 'metodo', 'estado']
 const ESTADOS = ['Recibido', 'En envío']
 
+// Aviso a Microsoft Teams (opcional): si hay TEAMS_WEBHOOK_URL, envía un mensaje
+// cuando se crea una solicitud. Es "fire-and-forget": nunca bloquea ni rompe la app.
+function notifyTeams(r) {
+  const url = process.env.TEAMS_WEBHOOK_URL
+  if (!url) return
+  const monto = r.importeEstimado ? '$' + Math.round(r.importeEstimado).toLocaleString('es-CO') : '—'
+  const linea = (etiqueta, valor) => (valor ? `<b>${etiqueta}:</b> ${valor}<br>` : '')
+  const text =
+    '🛒 <b>Nueva solicitud de compra</b><br>' +
+    linea('Solicitante', r.solicitante) +
+    linea('Proyecto', r.proyecto) +
+    linea('Categoría', r.categoria) +
+    linea('Descripción', r.descripcion) +
+    linea('Cantidad', r.cantidad) +
+    linea('Importe estimado', monto) +
+    (r.link ? `<b>Link:</b> ${r.link}<br>` : '')
+
+  Promise.resolve()
+    .then(() =>
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      }),
+    )
+    .catch((e) => console.error('Aviso Teams falló:', e.message))
+}
+
 function buildPurchase(b) {
   const importe = Number(b.importe)
   const missing = REQUIRED.filter((k) => !b[k] || !String(b[k]).trim())
@@ -314,7 +342,9 @@ app.post('/api/requests', requireAuth, async (req, res) => {
     cantidad: Number.isFinite(Number(b.cantidad)) && Number(b.cantidad) > 0 ? Math.floor(Number(b.cantidad)) : null,
   }
   try {
-    res.status(201).json(await insertRequest(request))
+    const created = await insertRequest(request)
+    notifyTeams(created) // aviso a Teams en segundo plano (si está configurado)
+    res.status(201).json(created)
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: 'Error al crear la solicitud' })

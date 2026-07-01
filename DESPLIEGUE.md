@@ -33,6 +33,7 @@ Defínelas en el panel del host, o crea un archivo `.env` y arranca con
 | `NODE_ENV` | Recomendada | Poner en `production`. |
 | `ALLOWED_DOMAIN` | No | Dominio de correo permitido para las cuentas. Por defecto `candelasoft.com`. |
 | `PORT` | No | Puerto de escucha (por defecto 3001). Muchos hosts lo inyectan solos. |
+| `TEAMS_WEBHOOK_URL` | No | (Opcional) Aviso por Microsoft Teams al crear una solicitud. Ver `NOTIFICACIONES-TEAMS.md`. |
 
 > En producción, el servidor **no arranca** si falta `SESSION_SECRET` (medida de seguridad).
 
