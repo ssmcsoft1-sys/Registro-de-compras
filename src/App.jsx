@@ -85,6 +85,18 @@ export default function App() {
     setRequests([])
   }, [])
 
+  // Refresca las solicitudes cada minuto mientras la sesión está abierta,
+  // para que el contador de pendientes se mantenga al día sin recargar.
+  useEffect(() => {
+    if (!user) return
+    const id = setInterval(() => {
+      fetchRequests()
+        .then(setRequests)
+        .catch(() => {})
+    }, 60000)
+    return () => clearInterval(id)
+  }, [user])
+
   const onAuthError = useCallback((e) => {
     if (e instanceof AuthError) {
       setUser(null)
@@ -202,10 +214,18 @@ export default function App() {
   }
 
   const role = user.role
+  const pendingRequests = requests.filter((r) => r.estado === 'Pendiente').length
 
   return (
     <div className="app">
-      <Sidebar role={role} user={user} view={view} onNavigate={setView} onLogout={handleLogout} />
+      <Sidebar
+        role={role}
+        user={user}
+        view={view}
+        onNavigate={setView}
+        onLogout={handleLogout}
+        pendingRequests={pendingRequests}
+      />
       <main className="main">
         <Header view={view} onRegister={() => setView('registrar')} />
         <div className="scroll-area">

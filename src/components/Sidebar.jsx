@@ -17,7 +17,7 @@ const NAV_TEAM = [
   { id: 'solicitudes', key: 'nav.solicitudes', Icon: Send },
 ]
 
-export default function Sidebar({ role, user, view, onNavigate, onLogout }) {
+export default function Sidebar({ role, user, view, onNavigate, onLogout, pendingRequests = 0 }) {
   const { t } = useSettings()
   const NAV = role === 'manager' ? NAV_MANAGER : NAV_TEAM
   return (
@@ -38,6 +38,9 @@ export default function Sidebar({ role, user, view, onNavigate, onLogout }) {
             >
               <Icon size={20} strokeWidth={2} aria-hidden />
               <span>{t(key)}</span>
+              {id === 'solicitudes' && pendingRequests > 0 && (
+                <span className="nav__badge">{pendingRequests}</span>
+              )}
             </button>
           )
         })}

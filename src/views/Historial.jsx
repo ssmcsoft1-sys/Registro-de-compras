@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Search, X, Check, Truck, Inbox, Trash2, Pencil, Receipt, Download, ZoomIn, ZoomOut } from 'lucide-react'
-import { filterRows, monthsFromPurchases } from '../lib/selectors.js'
+import { filterRows, monthsFromPurchases, currentMonthKey } from '../lib/selectors.js'
 import { PROYECTOS_FORM, CATEGORIAS, PROJ_COLORS } from '../lib/constants.js'
 import { useSettings } from '../lib/settings.jsx'
 import Registrar from './Registrar.jsx'
 
 const ALL_FILTERS = { q: '', fMonth: 'all', fProyecto: 'all', fCategoria: 'all' }
-// Al abrir, mostramos todas las compras (se puede filtrar por mes con el selector).
-const initialFilters = () => ({ ...ALL_FILTERS })
+// Al abrir, mostramos solo el mes actual (se puede cambiar con el selector).
+const initialFilters = () => ({ ...ALL_FILTERS, fMonth: currentMonthKey() })
 
 const isImage = (url) => url.startsWith('data:image/')
 

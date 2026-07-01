@@ -158,6 +158,19 @@ textarea {
 .nav__item span {
   flex: 1;
 }
+.nav__badge {
+  flex: 0 0 auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--yago-magenta-500);
+  color: #fff;
+  font: 700 11px var(--font-display);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .sidebar__user {
   font: 600 12px var(--font-display);
   color: var(--yago-gray-400);
