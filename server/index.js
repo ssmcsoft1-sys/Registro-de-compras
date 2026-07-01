@@ -311,6 +311,7 @@ app.post('/api/requests', requireAuth, async (req, res) => {
     importeEstimado: est != null && est > 0 ? est : null,
     nota: b.nota ? String(b.nota).trim() : null,
     link: b.link ? String(b.link).trim() : null,
+    cantidad: Number.isFinite(Number(b.cantidad)) && Number(b.cantidad) > 0 ? Math.floor(Number(b.cantidad)) : null,
   }
   try {
     res.status(201).json(await insertRequest(request))

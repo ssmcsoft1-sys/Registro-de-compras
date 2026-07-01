@@ -69,14 +69,18 @@ db.exec(`
     notaResponsable TEXT,
     compraId        TEXT,
     decidedAt       TEXT,
-    link            TEXT
+    link            TEXT,
+    cantidad        INTEGER
   );
 `)
 
-// Migración: añade la columna link a tablas de solicitudes ya existentes.
+// Migración: añade columnas a tablas de solicitudes ya existentes.
 const reqCols = db.prepare('PRAGMA table_info(requests)').all().map((c) => c.name)
 if (!reqCols.includes('link')) {
   db.exec('ALTER TABLE requests ADD COLUMN link TEXT')
+}
+if (!reqCols.includes('cantidad')) {
+  db.exec('ALTER TABLE requests ADD COLUMN cantidad INTEGER')
 }
 
 // Siembra inicial: si la tabla está vacía, carga las compras de ejemplo.
@@ -184,6 +188,7 @@ function rowToRequest(row) {
     compraId: row.compraId ?? null,
     decidedAt: row.decidedAt ?? null,
     link: row.link ?? null,
+    cantidad: row.cantidad ?? null,
     compraEstado: row.compraEstado ?? null, // estado de envío de la compra ligada
   }
 }
@@ -206,11 +211,11 @@ export async function getRequest(id) {
 export async function insertRequest(r) {
   db.prepare(`
     INSERT INTO requests
-      (id, created_at, solicitante, proyecto, categoria, descripcion, importeEstimado, nota, estado, notaResponsable, compraId, decidedAt, link)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, created_at, solicitante, proyecto, categoria, descripcion, importeEstimado, nota, estado, notaResponsable, compraId, decidedAt, link, cantidad)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     r.id, r.created_at, r.solicitante, r.proyecto, r.categoria, r.descripcion,
-    r.importeEstimado ?? null, r.nota ?? null, 'Pendiente', null, null, null, r.link ?? null,
+    r.importeEstimado ?? null, r.nota ?? null, 'Pendiente', null, null, null, r.link ?? null, r.cantidad ?? null,
   )
   return getRequest(r.id)
 }

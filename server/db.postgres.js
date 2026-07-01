@@ -89,10 +89,12 @@ await pool.query(`
     nota_responsable text,
     compra_id        text,
     decided_at       text,
-    link             text
+    link             text,
+    cantidad         integer
   );
 `)
 await pool.query('ALTER TABLE requests ADD COLUMN IF NOT EXISTS link text')
+await pool.query('ALTER TABLE requests ADD COLUMN IF NOT EXISTS cantidad integer')
 
 const { rows: countRows } = await pool.query('SELECT COUNT(*)::int AS n FROM purchases')
 if (countRows[0].n === 0) {
@@ -173,6 +175,7 @@ function rowToRequest(row) {
     compraId: row.compra_id ?? null,
     decidedAt: row.decided_at ?? null,
     link: row.link ?? null,
+    cantidad: row.cantidad ?? null,
     compraEstado: row.compra_estado ?? null,
   }
 }
@@ -195,9 +198,9 @@ export async function getRequest(id) {
 export async function insertRequest(r) {
   await pool.query(
     `INSERT INTO requests
-      (id, created_at, solicitante, proyecto, categoria, descripcion, importe_estimado, nota, estado, nota_responsable, compra_id, decided_at, link)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-    [r.id, r.created_at, r.solicitante, r.proyecto, r.categoria, r.descripcion, r.importeEstimado ?? null, r.nota ?? null, 'Pendiente', null, null, null, r.link ?? null],
+      (id, created_at, solicitante, proyecto, categoria, descripcion, importe_estimado, nota, estado, nota_responsable, compra_id, decided_at, link, cantidad)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+    [r.id, r.created_at, r.solicitante, r.proyecto, r.categoria, r.descripcion, r.importeEstimado ?? null, r.nota ?? null, 'Pendiente', null, null, null, r.link ?? null, r.cantidad ?? null],
   )
   return getRequest(r.id)
 }

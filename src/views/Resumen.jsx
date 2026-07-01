@@ -6,7 +6,6 @@ import {
   byCategoria,
   byMonth,
   monthsFromPurchases,
-  currentMonthKey,
 } from '../lib/selectors.js'
 import { PROYECTOS } from '../lib/constants.js'
 import { useSettings } from '../lib/settings.jsx'
@@ -38,7 +37,7 @@ function HorizontalBars({ items, money, emptyText }) {
 
 export default function Resumen({ purchases }) {
   const { t, money, monthsLong, months, tProject, tCategory } = useSettings()
-  const [scope, setScope] = useState(currentMonthKey) // 'all' | 'YYYY-MM'
+  const [scope, setScope] = useState('all') // 'all' | 'YYYY-MM' — por defecto: todo el periodo
   const [monthProject, setMonthProject] = useState('all')
 
   const scoped = useMemo(

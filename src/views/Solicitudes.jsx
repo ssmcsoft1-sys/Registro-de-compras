@@ -10,7 +10,7 @@ function todayISO() {
   return new Date(now - tz).toISOString().slice(0, 10)
 }
 
-const emptyForm = () => ({ proyecto: '', categoria: '', descripcion: '', importeEstimado: '', nota: '', link: '' })
+const emptyForm = () => ({ proyecto: '', categoria: '', descripcion: '', cantidad: '', importeEstimado: '', nota: '', link: '' })
 
 // Asegura que el enlace tenga protocolo para que abra correctamente.
 const hrefOf = (link) => (/^https?:\/\//i.test(link) ? link : `https://${link}`)
@@ -48,6 +48,7 @@ export default function Solicitudes({ requests, role, onCreate, onReject, onBuy,
       proyecto: form.proyecto,
       categoria: form.categoria,
       descripcion: form.descripcion.trim(),
+      cantidad: form.cantidad,
       importeEstimado: form.importeEstimado,
       nota: form.nota.trim(),
       link: form.link.trim(),
@@ -86,6 +87,18 @@ export default function Solicitudes({ requests, role, onCreate, onReject, onBuy,
         <form className="form-card sol-form" onSubmit={submit}>
           <h3 className="card__title sol-form__title">{t('sol.new')}</h3>
           <div className="form-grid">
+            <div>
+              <label className="field__label">{t('sol.cantidad')}</label>
+              <input
+                className="input"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="1"
+                value={form.cantidad}
+                onChange={(e) => upd('cantidad', e.target.value)}
+              />
+            </div>
             <div>
               <label className="field__label">{t('sol.importeEstimado')}</label>
               <div className="amount-wrap">
@@ -179,6 +192,7 @@ export default function Solicitudes({ requests, role, onCreate, onReject, onBuy,
                 <div className="sol-meta">
                   {t('sol.by', { name: r.solicitante })} · {formatDate(r.created_at.slice(0, 10))} ·{' '}
                   {tProject(r.proyecto)} · {tCategory(r.categoria)}
+                  {r.cantidad ? ` · ${t('sol.cantidad')}: ${r.cantidad}` : ''}
                   {r.importeEstimado ? ` · ${t('sol.estimated', { amount: money(r.importeEstimado) })}` : ''}
                 </div>
                 {r.link && (
