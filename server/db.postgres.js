@@ -205,6 +205,14 @@ export async function insertRequest(r) {
   return getRequest(r.id)
 }
 
+export async function updateRequest(id, f) {
+  await pool.query(
+    `UPDATE requests SET proyecto = $1, categoria = $2, descripcion = $3, importe_estimado = $4, nota = $5, link = $6, cantidad = $7 WHERE id = $8`,
+    [f.proyecto, f.categoria, f.descripcion, f.importeEstimado ?? null, f.nota ?? null, f.link ?? null, f.cantidad ?? null, id],
+  )
+  return getRequest(id)
+}
+
 export async function rejectRequest(id, notaResponsable, decidedAt) {
   await pool.query('UPDATE requests SET estado = $1, nota_responsable = $2, decided_at = $3 WHERE id = $4', [
     'Rechazada',

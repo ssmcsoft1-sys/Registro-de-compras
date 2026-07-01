@@ -220,6 +220,22 @@ export async function insertRequest(r) {
   return getRequest(r.id)
 }
 
+export async function updateRequest(id, f) {
+  db.prepare(
+    `UPDATE requests SET proyecto = ?, categoria = ?, descripcion = ?, importeEstimado = ?, nota = ?, link = ?, cantidad = ? WHERE id = ?`,
+  ).run(
+    f.proyecto,
+    f.categoria,
+    f.descripcion,
+    f.importeEstimado ?? null,
+    f.nota ?? null,
+    f.link ?? null,
+    f.cantidad ?? null,
+    id,
+  )
+  return getRequest(id)
+}
+
 export async function rejectRequest(id, notaResponsable, decidedAt) {
   db.prepare('UPDATE requests SET estado = ?, notaResponsable = ?, decidedAt = ? WHERE id = ?')
     .run('Rechazada', notaResponsable ?? null, decidedAt, id)

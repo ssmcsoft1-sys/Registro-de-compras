@@ -19,6 +19,7 @@ import {
   deletePurchase as apiDeletePurchase,
   fetchRequests,
   createRequest as apiCreateRequest,
+  updateRequest as apiUpdateRequest,
   rejectRequest as apiRejectRequest,
   buyRequest as apiBuyRequest,
   deleteRequest as apiDeleteRequest,
@@ -164,6 +165,21 @@ export default function App() {
     [showToast, onAuthError, t],
   )
 
+  const editRequestItem = useCallback(
+    async (id, fields) => {
+      try {
+        const updated = await apiUpdateRequest(id, fields)
+        setRequests((prev) => prev.map((r) => (r.id === id ? updated : r)))
+        showToast(t('toast.reqUpdated'))
+        return true
+      } catch (e) {
+        if (!onAuthError(e)) showToast(t('toast.reqError'))
+        return false
+      }
+    },
+    [showToast, onAuthError, t],
+  )
+
   const rejectRequest = useCallback(
     async (id, nota) => {
       try {
@@ -252,7 +268,9 @@ export default function App() {
                   <Solicitudes
                     requests={requests}
                     role={role}
+                    currentEmail={user.email}
                     onCreate={addRequest}
+                    onEdit={editRequestItem}
                     onReject={rejectRequest}
                     onBuy={buyRequest}
                     onDelete={deleteRequest}

@@ -16,9 +16,9 @@ resumen. Se configura una sola vez. Es gratis y no necesita cuentas extra.
    - **Post as:** *Flow bot*
    - **Post in:** *Chat with Flow bot* (te llega a ti como mensaje privado del bot)
      — o elige *Chat*/*Channel* y la persona/canal que quieras.
-   - **Message:** haz clic en el campo y, en el panel de **contenido dinámico**, inserta el valor
-     **`text`** del disparador. (Si no aparece "text", escribe en el campo un texto cualquiera y
-     luego reemplázalo por el dato dinámico `text` del webhook.)
+   - **Message:** el dato `text` NO aparece como contenido dinámico (el webhook no conoce el
+     formato). En su lugar, en el campo Mensaje abre la pestaña **Expresión** (o `fx`), escribe
+     exactamente `triggerBody()?['text']` y dale **Aceptar**. Quedará una ficha azul (la expresión).
 5. **Guardar**. Al guardar, el disparador muestra una **URL HTTP POST** — cópiala. Es un enlace
    largo que empieza por `https://prod-...logic.azure.com/...`.
 

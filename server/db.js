@@ -19,6 +19,7 @@ export const deletePurchase = adapter.deletePurchase
 export const getAllRequests = adapter.getAllRequests
 export const getRequest = adapter.getRequest
 export const insertRequest = adapter.insertRequest
+export const updateRequest = adapter.updateRequest
 export const rejectRequest = adapter.rejectRequest
 export const markRequestBought = adapter.markRequestBought
 export const deleteRequest = adapter.deleteRequest

@@ -14,6 +14,7 @@ import {
   getAllRequests,
   getRequest,
   insertRequest,
+  updateRequest,
   rejectRequest,
   markRequestBought,
   deleteRequest,
@@ -348,6 +349,40 @@ app.post('/api/requests', requireAuth, async (req, res) => {
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: 'Error al crear la solicitud' })
+  }
+})
+
+// Editar una solicitud: el autor (o el responsable) puede corregirla mientras esté Pendiente.
+app.patch('/api/requests/:id', requireAuth, async (req, res) => {
+  try {
+    const r = await getRequest(req.params.id)
+    if (!r) return res.status(404).json({ error: 'No encontrada' })
+    if (r.estado !== 'Pendiente') {
+      return res.status(409).json({ error: 'Solo se pueden editar solicitudes pendientes' })
+    }
+    if (req.user.role !== 'manager' && req.user.email !== r.solicitante) {
+      return res.status(403).json({ error: 'Solo puedes editar tus propias solicitudes' })
+    }
+    const b = req.body ?? {}
+    const required = ['proyecto', 'categoria', 'descripcion']
+    const missing = required.filter((k) => !b[k] || !String(b[k]).trim())
+    if (missing.length) return res.status(400).json({ error: 'Datos incompletos', missing })
+
+    const est = b.importeEstimado === '' || b.importeEstimado == null ? null : Number(b.importeEstimado)
+    const cant = Number.isFinite(Number(b.cantidad)) && Number(b.cantidad) > 0 ? Math.floor(Number(b.cantidad)) : null
+    const fields = {
+      proyecto: b.proyecto,
+      categoria: b.categoria,
+      descripcion: String(b.descripcion).trim(),
+      importeEstimado: est != null && est > 0 ? est : null,
+      nota: b.nota ? String(b.nota).trim() : null,
+      link: b.link ? String(b.link).trim() : null,
+      cantidad: cant,
+    }
+    res.json(await updateRequest(req.params.id, fields))
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: 'Error al actualizar la solicitud' })
   }
 })
 

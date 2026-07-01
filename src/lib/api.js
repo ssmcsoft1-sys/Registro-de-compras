@@ -108,6 +108,16 @@ export async function createRequest(request) {
   return res.json()
 }
 
+export async function updateRequest(id, fields) {
+  const res = await timedFetch(`${RBASE}/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+  })
+  await ensureOk(res, 'No se pudo actualizar la solicitud')
+  return res.json()
+}
+
 export async function rejectRequest(id, notaResponsable) {
   const res = await timedFetch(`${RBASE}/${id}/reject`, {
     method: 'POST',
